@@ -58,6 +58,18 @@ public sealed class PlaytimeTracker : IDisposable
     /// <summary>Raised after a finished session has been saved.</summary>
     public event Action<SessionInfo>? SessionCompleted;
 
+    /// <summary>True while any game of the library is running (so background work can wait for the games).</summary>
+    public bool AnyRunning
+    {
+        get
+        {
+            lock (_runningLock)
+            {
+                return _running.Count > 0;
+            }
+        }
+    }
+
     public bool IsRunning(int gameId)
     {
         lock (_runningLock)

@@ -49,6 +49,12 @@ public sealed class LibraryGame
     /// <summary>Local file path to the cached background/artwork image, if one was downloaded.</summary>
     public string? BackgroundImagePath { get; set; }
 
+    /// <summary>The web address the cover was downloaded from (recorded since originals can be restored); null for older covers.</summary>
+    public string? CoverImageUrl { get; set; }
+
+    /// <summary>The web address the background was downloaded from; null for older backgrounds.</summary>
+    public string? BackgroundImageUrl { get; set; }
+
     /// <summary>Comma-separated genre/tag list (e.g. "Shooter, Adventure"), from IGDB.</summary>
     public string? Genres { get; set; }
 

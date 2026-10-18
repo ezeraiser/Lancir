@@ -479,16 +479,16 @@ public sealed class LibraryService
         }
 
         SteamMediaCache.DeleteFor(gameId);
+        OptimizationLog.RemoveEverywhere(gameId);
         _dbContext.PlaySessions.RemoveRange(_dbContext.PlaySessions.Where(s => s.GameId == gameId));
         _dbContext.Games.Remove(game);
         await _dbContext.SaveChangesAsync(cancellationToken);
         _log.Log($"Kaldır: '{game.DisplayName}' (gameId={gameId}) veritabanından silindi.");
 
-        if (!string.IsNullOrWhiteSpace(game.CoverImagePath) && File.Exists(game.CoverImagePath))
-        {
-            File.Delete(game.CoverImagePath);
-            _log.Log($"Kaldır: kapak resmi dosyası silindi ({game.CoverImagePath}).");
-        }
+        // The cover and background, in whatever form they are stored in now (original, WebP, or a kept original).
+        MediaPaths.DeleteAllForms(game.CoverImagePath);
+        MediaPaths.DeleteAllForms(game.BackgroundImagePath);
+        _log.Log($"Kaldır: kapak ve arka plan dosyaları silindi (gameId={gameId}).");
     }
 
     /// <summary>
@@ -602,6 +602,7 @@ public sealed class LibraryService
             _log.Log($"SteamGridDB uygula: kapak resmi indiriliyor ({candidate.CoverImageUrl}).");
             game.CoverImagePath = await _imageCacheService.DownloadAndCacheAsync(
                 game.Id, candidate.CoverImageUrl, cancellationToken);
+            game.CoverImageUrl = candidate.CoverImageUrl;
         }
 
         if (!string.IsNullOrWhiteSpace(candidate.BackgroundImageUrl))
@@ -609,6 +610,7 @@ public sealed class LibraryService
             _log.Log($"SteamGridDB uygula: arka plan görseli indiriliyor ({candidate.BackgroundImageUrl}).");
             game.BackgroundImagePath = await _imageCacheService.DownloadAndCacheAsync(
                 game.Id, candidate.BackgroundImageUrl, cancellationToken, fileNameSuffix: "background");
+            game.BackgroundImageUrl = candidate.BackgroundImageUrl;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -725,6 +727,7 @@ public sealed class LibraryService
             _log.Log($"Karşılaştırma uygula: kapak resmi indiriliyor ({preview.CoverImageUrl}).");
             game.CoverImagePath = await _imageCacheService.DownloadAndCacheAsync(
                 game.Id, preview.CoverImageUrl, cancellationToken);
+            game.CoverImageUrl = preview.CoverImageUrl;
         }
 
         if (useNewBackground && !string.IsNullOrWhiteSpace(preview.BackgroundImageUrl))
@@ -732,6 +735,7 @@ public sealed class LibraryService
             _log.Log($"Karşılaştırma uygula: arka plan görseli indiriliyor ({preview.BackgroundImageUrl}).");
             game.BackgroundImagePath = await _imageCacheService.DownloadAndCacheAsync(
                 game.Id, preview.BackgroundImageUrl, cancellationToken, fileNameSuffix: "background");
+            game.BackgroundImageUrl = preview.BackgroundImageUrl;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -925,6 +929,7 @@ public sealed class LibraryService
             _log.Log($"IGDB uygula: kapak resmi indiriliyor ({candidate.CoverImageUrl}).");
             game.CoverImagePath = await _imageCacheService.DownloadAndCacheAsync(
                 game.Id, candidate.CoverImageUrl, cancellationToken);
+            game.CoverImageUrl = candidate.CoverImageUrl;
         }
 
         if (!string.IsNullOrWhiteSpace(candidate.BackgroundImageUrl))
@@ -932,6 +937,7 @@ public sealed class LibraryService
             _log.Log($"IGDB uygula: arka plan görseli indiriliyor ({candidate.BackgroundImageUrl}).");
             game.BackgroundImagePath = await _imageCacheService.DownloadAndCacheAsync(
                 game.Id, candidate.BackgroundImageUrl, cancellationToken, fileNameSuffix: "background");
+            game.BackgroundImageUrl = candidate.BackgroundImageUrl;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

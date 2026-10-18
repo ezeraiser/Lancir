@@ -15,7 +15,7 @@ namespace Lancir.Core.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.10");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
             modelBuilder.Entity("Lancir.Core.Models.IgnoredExecutable", b =>
                 {
@@ -68,10 +68,16 @@ namespace Lancir.Core.Migrations
                     b.Property<string>("BackgroundImagePath")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BackgroundImageUrl")
+                        .HasColumnType("TEXT");
+
                     b.Property<double?>("CommunityRating")
                         .HasColumnType("REAL");
 
                     b.Property<string>("CoverImagePath")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoverImageUrl")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")

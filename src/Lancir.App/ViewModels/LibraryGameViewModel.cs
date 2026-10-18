@@ -22,9 +22,10 @@ public sealed partial class LibraryGameViewModel : ObservableObject
     [ObservableProperty]
     private string _displayName;
 
-    public string? CoverImagePath => Game.CoverImagePath;
+    // A cover/background saved as ".../5.jpg" may have been converted to ".../5.webp" since: resolve to the file that exists.
+    public string? CoverImagePath => MediaPaths.Resolve(Game.CoverImagePath);
 
-    public string? BackgroundImagePath => Game.BackgroundImagePath;
+    public string? BackgroundImagePath => MediaPaths.Resolve(Game.BackgroundImagePath);
 
     public string? Description => Game.Description;
 
@@ -281,6 +282,23 @@ public sealed partial class LibraryGameViewModel : ObservableObject
     private bool _isDropTarget;
 
     /// <summary>Image used behind the details panel: the background art, else the cover.</summary>
+    /// <summary>When the cover file last changed (0 when there is none); lets the card notice a re-downloaded cover with the same path.</summary>
+    public long CoverStamp => StampOf(CoverImagePath);
+
+    public long PanelBackgroundStamp => StampOf(PanelBackgroundPath);
+
+    private static long StampOf(string? path)
+    {
+        try
+        {
+            return !string.IsNullOrWhiteSpace(path) && File.Exists(path) ? File.GetLastWriteTimeUtc(path).Ticks : 0;
+        }
+        catch (IOException)
+        {
+            return 0;
+        }
+    }
+
     public string? PanelBackgroundPath => HasBackground ? BackgroundImagePath : CoverImagePath;
 
     [ObservableProperty]

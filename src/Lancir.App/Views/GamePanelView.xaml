@@ -126,7 +126,7 @@
                     <ui:SymbolIcon Symbol="Checkmark24" Visibility="{Binding Size, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Full}" />
                 </MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="{loc:Tr 'Otomatik (yarım genişlik)'}" Tag="Auto" Click="OnCardSizeMenuClick">
+            <MenuItem Header="{loc:Tr 'Tek sütun (otomatik)'}" Tag="Auto" Click="OnCardSizeMenuClick">
                 <MenuItem.Icon>
                     <ui:SymbolIcon Symbol="Checkmark24" Visibility="{Binding Size, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Auto}" />
                 </MenuItem.Icon>
@@ -145,6 +145,11 @@
             <MenuItem Header="{loc:Tr 'Varsayılan düzene dön'}" Click="OnResetLayoutMenuClick">
                 <MenuItem.Icon>
                     <ui:SymbolIcon Symbol="ArrowReset24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Bu düzeni tüm oyunlara uygula'}" Click="OnApplyLayoutToAllMenuClick">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Copy24" />
                 </MenuItem.Icon>
             </MenuItem>
         </ContextMenu>
@@ -318,7 +323,7 @@
 
         <DataTemplate x:Key="Card.gallery">
             <StackPanel>
-                <Grid Margin="0,0,0,8" Cursor="Hand" ToolTip="{loc:Tr 'Fragmanı tarayıcıda aç'}">
+                <Grid Margin="0,0,0,8" Cursor="Hand" ToolTip="{loc:Tr 'Fragmanı oynat'}">
                     <Grid.Visibility>
                         <Binding Path="Panel.TrailerUrl" Converter="{StaticResource NullToVisibilityConverter}" />
                     </Grid.Visibility>
@@ -331,20 +336,21 @@
                     <Border Width="46" Height="46" CornerRadius="23" Background="#99000000" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <ui:SymbolIcon Symbol="Play24" Filled="True" FontSize="20" />
                     </Border>
-                    <Button Style="{StaticResource OverlayHitButtonStyle}" Command="{Binding Panel.OpenUrlCommand}" CommandParameter="{Binding Panel.TrailerUrl}" />
+                    <Button Style="{StaticResource OverlayHitButtonStyle}" Command="{Binding Panel.OpenTrailerCommand}" />
                 </Grid>
                 <ItemsControl ItemsSource="{Binding Panel.Screenshots}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <WrapPanel />
+                            <UniformGrid Columns="{Binding Panel.GalleryColumns}" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid Width="150" Height="84" Margin="0,0,8,8" Cursor="Hand" ToolTip="{loc:Tr 'Büyüt'}">
+                            <Grid Margin="0,0,8,8" Cursor="Hand" ToolTip="{loc:Tr 'Büyüt'}"
+                                  Height="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={StaticResource AspectHeightConverter}}">
                                 <Border CornerRadius="6">
                                     <Border.Background>
-                                        <ImageBrush Stretch="UniformToFill" ctrl:AsyncImage.DecodeWidth="320" ctrl:AsyncImage.Source="{Binding}" />
+                                        <ImageBrush Stretch="UniformToFill" ctrl:AsyncImage.DecodeWidth="480" ctrl:AsyncImage.Source="{Binding}" />
                                     </Border.Background>
                                 </Border>
                                 <Button Style="{StaticResource OverlayHitButtonStyle}"
@@ -630,6 +636,11 @@
                         <ui:SymbolIcon Symbol="ArrowReset24" />
                     </MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="{loc:Tr 'Bu düzeni tüm oyunlara uygula'}" Click="OnApplyLayoutToAllMenuClick">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="Copy24" />
+                    </MenuItem.Icon>
+                </MenuItem>
             </ContextMenu>
         </Grid.ContextMenu>
 
@@ -651,7 +662,8 @@
                         <Border CornerRadius="9">
                             <Border.Background>
                                 <ImageBrush Stretch="UniformToFill" ctrl:AsyncImage.DecodeWidth="240"
-                                            ctrl:AsyncImage.Source="{Binding Game.CoverImagePath}" />
+                                            ctrl:AsyncImage.Source="{Binding Game.CoverImagePath}"
+                                            ctrl:AsyncImage.Stamp="{Binding Game.CoverStamp}" />
                             </Border.Background>
                         </Border>
                     </Border>
@@ -802,51 +814,158 @@
 
                 <!-- ============ cards (the only scrolling part) ============ -->
                 <ScrollViewer x:Name="CardsScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" ScrollChanged="OnCardsScrollChanged">
+                <StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="22,0,22,8">
+                    <StackPanel Orientation="Horizontal">
+                        <StackPanel.Visibility>
+                            <Binding Path="IsEditingLayout" Converter="{StaticResource NullToVisibilityConverter}" />
+                        </StackPanel.Visibility>
+                        <TextBlock Text="{loc:Tr 'Kart sütunu'}" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <ComboBox ItemsSource="{x:Static vm:GamePanelViewModel.CardColumnOptions}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                                  SelectedValue="{Binding CardColumns}" MinWidth="86" FontSize="12" Margin="0,0,14,0" />
+                        <TextBlock Text="{loc:Tr 'Görsel sütunu'}" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <ComboBox ItemsSource="{x:Static vm:GamePanelViewModel.GalleryColumnOptions}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                                  SelectedValue="{Binding GalleryColumns}" MinWidth="64" FontSize="12" Margin="0,0,14,0" />
+                    </StackPanel>
+                <ui:Button Padding="12,4" FontSize="12" Command="{Binding ToggleEditLayoutCommand}"
+                           ToolTip="{loc:Tr 'Kartları taşı, boyutlandır, göster veya gizle'}">
+                    <ui:Button.Style>
+                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                            <Setter Property="Content" Value="{loc:Tr 'Düzenle'}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEditingLayout}" Value="True">
+                                    <Setter Property="Content" Value="{loc:Tr 'Bitti'}" />
+                                    <Setter Property="Appearance" Value="Primary" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ui:Button.Style>
+                </ui:Button>
+                </StackPanel>
                 <ItemsControl x:Name="CardsHost" ItemsSource="{Binding Cards}" AllowDrop="True" Background="Transparent" SizeChanged="OnCardsHostSizeChanged"
                               RequestBringIntoView="OnCardsRequestBringIntoView"
                               Margin="22,2,22,24"
                               DragOver="OnHostDragOver" Drop="OnHostDrop">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <ctrl:MasonryPanel />
+                            <ctrl:MasonryPanel Columns="{Binding CardColumns}" ActualColumns="{Binding ActualCardColumns, Mode=OneWayToSource}" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:DetailCardViewModel}">
                             <Border x:Name="CardBorder" Style="{StaticResource CardStyle}" AllowDrop="True"
+                                    Height="{Binding CardHeight}"
                                     ContextMenu="{StaticResource CardMenu}"
                                     DragOver="OnCardDragOver" DragLeave="OnCardDragLeave" Drop="OnCardDrop">
-                                <StackPanel>
-                                    <DockPanel Margin="0,0,0,9" Height="24">
-                                        <Button x:Name="ResizeButton" DockPanel.Dock="Right" Style="{StaticResource SmallIconButtonStyle}"
-                                                Opacity="0" Click="OnResizeClick">
+                                <Border.Visibility>
+                                    <Binding Path="IsShown" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </Border.Visibility>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <DockPanel Grid.Row="0" Margin="0,0,0,9" Height="24">
+                                        <Button x:Name="EyeButton" DockPanel.Dock="Right" Style="{StaticResource SmallIconButtonStyle}"
+                                                Click="OnToggleCardHiddenClick">
+                                            <Button.Visibility>
+                                                <Binding Path="Panel.IsEditingLayout" Converter="{StaticResource NullToVisibilityConverter}" />
+                                            </Button.Visibility>
                                             <Grid>
-                                                <ui:SymbolIcon Symbol="ArrowMaximize24" FontSize="14" />
-                                                <ui:SymbolIcon Symbol="ArrowMinimize24" FontSize="14"
-                                                               Visibility="{Binding Size, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Full}" />
+                                                <ui:SymbolIcon Symbol="Eye24" FontSize="14" />
+                                                <ui:SymbolIcon Symbol="EyeOff24" FontSize="14">
+                                                    <ui:SymbolIcon.Visibility>
+                                                        <Binding Path="IsHidden" Converter="{StaticResource NullToVisibilityConverter}" />
+                                                    </ui:SymbolIcon.Visibility>
+                                                </ui:SymbolIcon>
                                             </Grid>
                                             <Button.ToolTip>
-                                                <ToolTip Content="{loc:Tr 'Boyutu değiştir (tam / yarım genişlik)'}" />
+                                                <ToolTip Content="{loc:Tr 'Bu oyunda göster / gizle'}" />
                                             </Button.ToolTip>
                                         </Button>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <StackPanel.Visibility>
+                                                <Binding Path="Panel.IsEditingLayout" Converter="{StaticResource NullToVisibilityConverter}" />
+                                            </StackPanel.Visibility>
+                                            <Button Style="{StaticResource SmallIconButtonStyle}" Click="OnSpanMinusClick" ToolTip="{loc:Tr 'Bir sütun daralt'}">
+                                                <ui:SymbolIcon Symbol="Subtract24" FontSize="14" />
+                                            </Button>
+                                            <TextBlock Text="{Binding SpanText}" FontSize="11" VerticalAlignment="Center" MinWidth="26" TextAlignment="Center"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       ToolTip="{loc:Tr 'Kartın kapladığı sütun sayısı'}" />
+                                            <Button Style="{StaticResource SmallIconButtonStyle}" Click="OnSpanPlusClick" ToolTip="{loc:Tr 'Bir sütun genişlet'}">
+                                                <ui:SymbolIcon Symbol="Add24" FontSize="14" />
+                                            </Button>
+                                            <Button Style="{StaticResource SmallIconButtonStyle}" Click="OnResetCardHeightClick" ToolTip="{loc:Tr 'Yüksekliği içeriğe uydur'}">
+                                                <Button.Visibility>
+                                                    <Binding Path="HasFixedHeight" Converter="{StaticResource NullToVisibilityConverter}" />
+                                                </Button.Visibility>
+                                                <ui:SymbolIcon Symbol="ArrowAutofitHeight24" FontSize="14" />
+                                            </Button>
+                                        </StackPanel>
                                         <TextBlock DockPanel.Dock="Left" Text="⋮⋮" Margin="0,0,6,0" VerticalAlignment="Center"
                                                    Background="Transparent" Cursor="SizeAll" ToolTip="{loc:Tr 'Sürükleyerek taşı'}"
                                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                   PreviewMouseLeftButtonDown="OnGripMouseDown" MouseMove="OnGripMouseMove" />
+                                                   PreviewMouseLeftButtonDown="OnGripMouseDown" MouseMove="OnGripMouseMove">
+                                            <TextBlock.Visibility>
+                                                <Binding Path="Panel.IsEditingLayout" Converter="{StaticResource NullToVisibilityConverter}" />
+                                            </TextBlock.Visibility>
+                                        </TextBlock>
                                         <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                     </DockPanel>
-                                    <ContentControl Content="{Binding}" ContentTemplateSelector="{StaticResource CardContentSelector}" />
-                                </StackPanel>
+                                    <ContentControl Grid.Row="1" Content="{Binding}" ContentTemplateSelector="{StaticResource CardContentSelector}">
+                                        <ContentControl.Style>
+                                            <Style TargetType="ContentControl">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                    <!-- a fixed height: the content scrolls inside the card (only then, so the wheel still reaches the panel otherwise) -->
+                                                    <DataTrigger Binding="{Binding HasFixedHeight}" Value="True">
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="ContentControl">
+                                                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                                        <ContentPresenter />
+                                                                    </ScrollViewer>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ContentControl.Style>
+                                    </ContentControl>
+                                    <!-- the corner handle: drag to set the width in columns and the height in rows -->
+                                    <Thumb Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="20" Height="20"
+                                           Margin="0,0,-8,-8" Cursor="SizeNWSE" Panel.ZIndex="5"
+                                           DragStarted="OnCardResizeStarted" DragDelta="OnCardResizeDelta" DragCompleted="OnCardResizeCompleted"
+                                           ToolTip="{loc:Tr 'Köşeden sürükleyerek genişlik ve yüksekliği ayarla'}">
+                                        <Thumb.Visibility>
+                                            <Binding Path="Panel.IsEditingLayout" Converter="{StaticResource NullToVisibilityConverter}" />
+                                        </Thumb.Visibility>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border Background="Transparent">
+                                                    <Path Data="M 16,5 L 5,16 L 16,16 Z" Fill="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Grid>
                             </Border>
                             <DataTemplate.Triggers>
-                                <Trigger SourceName="CardBorder" Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="ResizeButton" Property="Opacity" Value="1" />
-                                </Trigger>
+                                <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                    <Setter TargetName="CardBorder" Property="Opacity" Value="0.5" />
+                                </DataTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                </StackPanel>
                 </ScrollViewer>
         </Grid>
 
@@ -862,7 +981,7 @@
                 <MouseBinding MouseAction="LeftClick" Command="{Binding CloseViewerCommand}" />
             </Grid.InputBindings>
             <Image Margin="64,48" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
-                   Source="{Binding ViewerImageUrl, Converter={StaticResource UrlToImageConverter}, ConverterParameter=1920}" />
+                   ctrl:AsyncImage.DecodeWidth="1920" ctrl:AsyncImage.Source="{Binding ViewerImageUrl}" />
             <Button HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0" Style="{StaticResource IconButtonStyle}"
                     Width="44" Height="44" Command="{Binding PreviousScreenshotCommand}" ToolTip="{loc:Tr 'Önceki'}">
                 <ui:SymbolIcon Symbol="ChevronLeft24" FontSize="22" />
@@ -877,6 +996,115 @@
             </Button>
             <TextBlock Text="{Binding ViewerCounter}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Grid>
+
+        <!-- ============ in-app video viewer: the store trailer and the description clips ============ -->
+        <Grid x:Name="VideoViewer" Panel.ZIndex="25" Focusable="True" Background="#F5000000"
+              PreviewMouseLeftButtonUp="OnVideoMouseUp">
+            <Grid.Visibility>
+                <Binding Path="IsVideoOpen" Converter="{StaticResource NullToVisibilityConverter}" />
+            </Grid.Visibility>
+            <Grid.InputBindings>
+                <KeyBinding Key="Escape" Command="{Binding CloseVideoCommand}" />
+                <KeyBinding Key="Space" Command="{Binding ToggleVideoPlayCommand}" />
+                <KeyBinding Key="Left" Command="{Binding VideoBackCommand}" />
+                <KeyBinding Key="Right" Command="{Binding VideoForwardCommand}" />
+            </Grid.InputBindings>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Grid.Row="0" Margin="20,14,12,0" LastChildFill="True">
+                <Button DockPanel.Dock="Right" Style="{StaticResource IconButtonStyle}" Command="{Binding CloseVideoCommand}"
+                        ToolTip="{loc:Tr 'Kapat'}">
+                    <ui:SymbolIcon Symbol="Dismiss24" FontSize="17" />
+                </Button>
+                <TextBlock Text="{Binding VideoTitle}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+
+            <Grid Grid.Row="1" Margin="20,8">
+                <Image Source="{Binding VideoFrame}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                <Button Style="{StaticResource OverlayHitButtonStyle}" Command="{Binding ToggleVideoPlayCommand}" />
+                <ui:ProgressRing IsIndeterminate="True" Width="56" Height="56" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <ui:ProgressRing.Visibility>
+                        <Binding Path="IsVideoLoading" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </ui:ProgressRing.Visibility>
+                </ui:ProgressRing>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel.Visibility>
+                        <Binding Path="IsVideoFailed" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </StackPanel.Visibility>
+                    <TextBlock Text="{Binding VideoMessage}" FontSize="15" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ui:Button Content="{loc:Tr 'Mağaza sayfasında aç'}" Command="{Binding OpenVideoFallbackCommand}"
+                               HorizontalAlignment="Center" Margin="0,12,0,0">
+                        <ui:Button.Visibility>
+                            <Binding Path="VideoFallbackUrl" Converter="{StaticResource NullToVisibilityConverter}" />
+                        </ui:Button.Visibility>
+                    </ui:Button>
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="2" Margin="20,0,20,16" PreviewMouseLeftButtonDown="OnVideoControlsMouseDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="110" />
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Style="{StaticResource IconButtonStyle}" Command="{Binding VideoBackCommand}"
+                        ToolTip="{loc:Tr '10 sn geri (←)'}">
+                    <ui:SymbolIcon Symbol="Rewind24" FontSize="18" />
+                </Button>
+                <Button Grid.Column="2" Style="{StaticResource IconButtonStyle}" Command="{Binding VideoForwardCommand}"
+                        ToolTip="{loc:Tr '10 sn ileri (→)'}">
+                    <ui:SymbolIcon Symbol="FastForward24" FontSize="18" />
+                </Button>
+                <Button Grid.Column="1" Style="{StaticResource IconButtonStyle}" Command="{Binding ToggleVideoPlayCommand}"
+                        ToolTip="{loc:Tr 'Oynat / duraklat (Boşluk)'}">
+                    <Grid>
+                        <ui:SymbolIcon Symbol="Pause24" FontSize="18">
+                            <ui:SymbolIcon.Visibility>
+                                <Binding Path="IsVideoPlaying" Converter="{StaticResource NullToVisibilityConverter}" />
+                            </ui:SymbolIcon.Visibility>
+                        </ui:SymbolIcon>
+                        <ui:SymbolIcon Symbol="Play24" Filled="True" FontSize="18">
+                            <ui:SymbolIcon.Visibility>
+                                <Binding Path="IsVideoPlaying" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                            </ui:SymbolIcon.Visibility>
+                        </ui:SymbolIcon>
+                    </Grid>
+                </Button>
+                <Slider x:Name="VideoSeekBar" Grid.Column="3" Minimum="0" Maximum="1"
+                        Value="{Binding VideoPosition, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        IsMoveToPointEnabled="True" VerticalAlignment="Center" Margin="12,0"
+                        ValueChanged="OnVideoSeekChanged" />
+                <TextBlock Grid.Column="4" Text="{Binding VideoTimeText}" FontSize="12.5" VerticalAlignment="Center" Margin="0,0,14,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Button Grid.Column="5" Style="{StaticResource IconButtonStyle}" Command="{Binding ToggleVideoMuteCommand}"
+                              ToolTip="{loc:Tr 'Sesi kapat'}" Padding="8">
+                    <Grid>
+                        <ui:SymbolIcon Symbol="Speaker224" FontSize="18">
+                            <ui:SymbolIcon.Visibility>
+                                <Binding Path="IsVideoMuted" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                            </ui:SymbolIcon.Visibility>
+                        </ui:SymbolIcon>
+                        <ui:SymbolIcon Symbol="SpeakerOff24" FontSize="18">
+                            <ui:SymbolIcon.Visibility>
+                                <Binding Path="IsVideoMuted" Converter="{StaticResource NullToVisibilityConverter}" />
+                            </ui:SymbolIcon.Visibility>
+                        </ui:SymbolIcon>
+                    </Grid>
+                </Button>
+                <Slider Grid.Column="6" Minimum="0" Maximum="100" Value="{Binding VideoVolume}" VerticalAlignment="Center"
+                        IsMoveToPointEnabled="True" ToolTip="{loc:Tr 'Ses'}" />
+            </Grid>
         </Grid>
 
         <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18" Padding="16,8" CornerRadius="8"

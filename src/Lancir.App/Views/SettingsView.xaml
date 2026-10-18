@@ -6,6 +6,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vm="clr-namespace:Lancir.App.ViewModels"
              xmlns:svc="clr-namespace:Lancir.App.Services"
+             xmlns:views="clr-namespace:Lancir.App.Views"
+             xmlns:ctrl="clr-namespace:Lancir.App.Controls"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:SettingsViewModel}">
@@ -15,10 +17,11 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <TextBlock Grid.Row="0" Text="{loc:Tr 'Ayarlar'}" FontSize="26" FontWeight="SemiBold" Margin="0,4,0,12" />
-        <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" Padding="0">
+        <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" Padding="0"
+                    SelectedIndex="{Binding SelectedSectionIndex, Mode=TwoWay}">
             <TabItem Header="{loc:Tr 'Genel'}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel MaxWidth="520" HorizontalAlignment="Left" Margin="0,16,0,16">
+                    <ctrl:ColumnFlowPanel Margin="0,16,0,16">
                     <TextBlock Text="Dil / Language" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
                     <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
@@ -38,12 +41,39 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                    </StackPanel>
+                                            <TextBlock Text="{loc:Tr 'Başlangıç ve pencere'}" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                        <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                                CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                            <StackPanel>
+                                <CheckBox Content="{loc:Tr 'Windows ile birlikte başlat'}" IsChecked="{Binding RunAtStartup}" />
+                                <TextBlock Foreground="{DynamicResource SystemFillColorCautionBrush}" FontSize="12" Margin="0,4,0,0"
+                                           TextWrapping="Wrap" Text="{Binding StartupMessage}">
+                                    <TextBlock.Visibility>
+                                        <Binding Path="StartupMessage" Converter="{StaticResource NullToVisibilityConverter}" />
+                                    </TextBlock.Visibility>
+                                </TextBlock>
+
+                                <CheckBox Content="{loc:Tr 'Windows ile başlayınca simge durumunda başlat'}" IsChecked="{Binding StartMinimizedAtWindowsStartup}"
+                                          IsEnabled="{Binding RunAtStartup}" Margin="0,12,0,0" />
+                                <CheckBox Content="{loc:Tr 'Her açılışta simge durumunda başlat'}" IsChecked="{Binding StartMinimized}" Margin="0,12,0,0" />
+                                <CheckBox Content="{loc:Tr 'Simge durumuna alınca sistem tepsisine gönder (sağ alt köşe)'}"
+                                          IsChecked="{Binding MinimizeToTray}" Margin="0,12,0,0" />
+                                <CheckBox Content="{loc:Tr 'Kapat (X) düğmesi sistem tepsisine küçültsün'}"
+                                          IsChecked="{Binding CloseToTray}" Margin="0,12,0,0" />
+
+                                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Margin="0,12,0,0"
+                                           TextWrapping="Wrap"
+                                           Text="{loc:Tr 'Sistem tepsisindeyken Lancir çalışmaya ve oynama sürelerini saymaya devam eder. Simgeye tıklayarak açar, sağ tıklayarak çıkış yaparsınız. Aynı anda yalnızca bir Lancir çalışır: ikinci kez başlatmak mevcut pencereyi öne getirir.'}" />
+                            </StackPanel>
+                        </Border>
+                    </ctrl:ColumnFlowPanel>
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="{loc:Tr 'Görünüm'}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel MaxWidth="520" HorizontalAlignment="Left" Margin="0,16,0,16">
+                    <ctrl:ColumnFlowPanel Margin="0,16,0,16">
                     <TextBlock Text="{loc:Tr 'Görünüm'}" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
                     <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
@@ -85,6 +115,76 @@
                             <ui:Button Content="{loc:Tr 'Varsayılana dön'}" Command="{Binding ResetCommand}" HorizontalAlignment="Left" />
                         </StackPanel>
                     </Border>
+                    <TextBlock Text="{loc:Tr 'Kütüphane listeleri'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Soldaki şeritte, oyunların durumuna göre kütüphaneler gösterilir. İstediklerinizi gizleyebilirsiniz.'}" />
+                            <CheckBox Content="{loc:Tr 'Favoriler'}" IsChecked="{Binding ShowFavoritesLibrary}" />
+                            <CheckBox Content="{loc:Tr 'Oynuyorum'}" IsChecked="{Binding ShowPlayingLibrary}" />
+                            <CheckBox Content="{loc:Tr 'Bitirdim'}" IsChecked="{Binding ShowFinishedLibrary}" />
+                            <CheckBox Content="{loc:Tr 'Bıraktım'}" IsChecked="{Binding ShowDroppedLibrary}" />
+                            <CheckBox Content="{loc:Tr 'Listede'}" IsChecked="{Binding ShowBacklogLibrary}" />
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="{loc:Tr 'Oyun detay paneli'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Tr 'Varsayılan kart düzeni'}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                                       Margin="0,0,0,12" TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Kartların sırası ve genişliği, kendi düzeni olmayan her oyunda böyle açılır. Bir oyunun düzenini panelden değiştirirseniz yalnızca o oyun etkilenir.'}" />
+                            <ItemsControl ItemsSource="{Binding DefaultCardRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox IsChecked="{Binding IsVisible}" MinWidth="0" Margin="0,0,8,0" ToolTip="{loc:Tr 'Göster'}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" />
+                                            <ComboBox Grid.Column="2" ItemsSource="{Binding DataContext.CardSizeOptions, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                      SelectedItem="{Binding SelectedSize}" DisplayMemberPath="Label" HorizontalAlignment="Stretch" Margin="0,0,8,0" />
+                                            <Button Grid.Column="3" Content="&#xE70E;" FontFamily="Segoe MDL2 Assets" Width="32" Height="32" Padding="0" Margin="0,0,4,0"
+                                                    Command="{Binding DataContext.MoveCardRowUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Grid.Column="4" Content="&#xE70D;" FontFamily="Segoe MDL2 Assets" Width="32" Height="32" Padding="0"
+                                                    Command="{Binding DataContext.MoveCardRowDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="190" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{loc:Tr 'Kart sütunu'}" VerticalAlignment="Center" Margin="0,0,0,6" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding CardColumnOptions}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                                          SelectedValue="{Binding DefaultCardColumns}" HorizontalAlignment="Stretch" Margin="0,0,40,6" />
+                                <TextBlock Grid.Row="1" Text="{loc:Tr 'Görsel sütunu'}" VerticalAlignment="Center" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding GalleryColumnOptions}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                                          SelectedValue="{Binding DefaultGalleryColumns}" HorizontalAlignment="Stretch" Margin="0,0,40,0" />
+                            </Grid>
+                            <ui:Button Content="{loc:Tr 'Varsayılana dön'}" Command="{Binding ResetDefaultCardLayoutCommand}"
+                                       HorizontalAlignment="Left" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
                     <TextBlock Text="{loc:Tr 'Kütüphane'}" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
                     <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
@@ -99,12 +199,12 @@
                                        Text="{loc:Tr 'Kapalıyken oyunu detay panelindeki Oynat düğmesinden başlatırsınız. Liste görünümü etkilenmez.'}" />
                         </StackPanel>
                     </Border>
-                    </StackPanel>
+                    </ctrl:ColumnFlowPanel>
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="{loc:Tr 'Steam'}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel MaxWidth="520" HorizontalAlignment="Left" Margin="0,16,0,16">
+                    <ctrl:ColumnFlowPanel Margin="0,16,0,16">
                     <TextBlock Text="{loc:Tr 'Steam hesabı'}" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
                     <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
@@ -161,12 +261,12 @@
                             </TextBlock.Visibility>
                         </TextBlock>
                     </Grid>
-                    </StackPanel>
+                    </ctrl:ColumnFlowPanel>
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="{loc:Tr 'Görsel kaynakları'}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel MaxWidth="520" HorizontalAlignment="Left" Margin="0,16,0,16">
+                    <ctrl:ColumnFlowPanel Margin="0,16,0,16">
                     <TextBlock Text="{loc:Tr 'Kapak görseli kaynakları'}" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
                     <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12"
@@ -224,12 +324,12 @@
                             </TextBlock.Visibility>
                         </TextBlock>
                     </Grid>
-                    </StackPanel>
+                    </ctrl:ColumnFlowPanel>
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="{loc:Tr 'Performans'}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel MaxWidth="520" HorizontalAlignment="Left" Margin="0,16,0,16">
+                    <ctrl:ColumnFlowPanel Margin="0,16,0,16">
                     <TextBlock Text="{loc:Tr 'Süre takibi'}" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
                     <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
@@ -247,6 +347,70 @@
                                     TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding PlaytimeCheckSeconds}" />
                         </StackPanel>
                     </Border>
+                    <TextBlock Text="{loc:Tr 'Klipler (video)'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                                       Margin="0,0,0,12" TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Mağaza açıklamasındaki kısa klipler Windows\'un yerleşik kodlayıcısıyla daha küçük bir boyut ve bit hızına çevrilir; klipler küçük kutularda gösterildiği için çoğunda fark görülmez, işlemci yükü de azalır. Sonuç yeterince küçük değilse orijinal kalır. Her klip bir kez işlenir (tekrar tekrar sıkıştırmak kaliteyi düşürür). Yalnızca mp4 klipler; Windows\'un çözemediği klipler olduğu gibi kalır.'}" />
+
+                            <TextBlock Text="{loc:Tr 'Saklama biçimi'}" FontSize="12" Margin="0,0,0,4" />
+                            <ComboBox ItemsSource="{Binding ClipStorageOptions}" SelectedItem="{Binding SelectedClipStorage}"
+                                      DisplayMemberPath="Label" HorizontalAlignment="Stretch" Margin="0,0,0,12" />
+
+                            <StackPanel IsEnabled="{Binding IsClipCompressing}">
+                                <TextBlock Text="{loc:Tr 'Kalite'}" FontSize="12" Margin="0,0,0,4" />
+                                <ComboBox ItemsSource="{Binding ClipQualityOptions}" SelectedItem="{Binding SelectedClipQuality}"
+                                          DisplayMemberPath="Label" HorizontalAlignment="Stretch" />
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding ClipPendingText}" FontSize="12" Margin="0,10,0,0"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                            <ui:Button Content="{loc:Tr 'Klip optimizasyonu yap'}" Command="{Binding OptimizeClipsCommand}"
+                                       IsEnabled="{Binding CanOptimizeClips}" Margin="0,12,0,0" />
+                            <TextBlock Text="{Binding ClipOptimizeText}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource SystemFillColorSuccessBrush}">
+                                <TextBlock.Visibility>
+                                    <Binding Path="ClipOptimizeText" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </TextBlock.Visibility>
+                            </TextBlock>
+
+                            <TextBlock Text="{loc:Tr 'Klip geçmişi (oyun bazlı)'}" FontWeight="SemiBold" Margin="0,18,0,4" />
+                            <TextBlock Text="{Binding ClipSummary}" FontSize="12" Margin="0,0,0,8" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="{loc:Tr 'Henüz küçültülmüş klip yok.'}" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                                <TextBlock.Visibility>
+                                    <Binding Path="HasClipRows" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                                </TextBlock.Visibility>
+                            </TextBlock>
+                            <ItemsControl ItemsSource="{Binding ClipRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:OptimizationRow}">
+                                        <Border Padding="0,8" BorderThickness="0,0,0,1"
+                                                BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <TextBlock Text="{Binding Game}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,0,110,0" />
+                                                    <TextBlock Text="{Binding When}" FontSize="11.5" HorizontalAlignment="Right"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                </Grid>
+                                                <TextBlock Text="{Binding Last}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock Text="{Binding Total}" FontSize="12" TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="{loc:Tr 'Bellek'}" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
                     <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
@@ -288,8 +452,210 @@
                             </TextBlock>
                         </StackPanel>
                     </Border>
-                    </StackPanel>
+                                            <TextBlock Text="{loc:Tr 'Görseller ve disk'}" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                        <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                                CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                            <StackPanel>
+                                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                                           Margin="0,0,0,12" TextWrapping="Wrap"
+                                           Text="{loc:Tr 'Steam ve görsel kaynaklarından indirilen resimler WebP biçimine çevrilerek çok daha az yer kaplar; ekranda gözle ayırt edilebilir kalite kaybı olmaz. Yeni indirilenler hemen, eskiler uygulama açıldıktan kısa süre sonra arka planda çevrilir.'}" />
+
+                                <TextBlock Text="{loc:Tr 'Saklama biçimi'}" FontSize="12" Margin="0,0,0,4" />
+                                <ComboBox ItemsSource="{Binding ImageStorageOptions}" SelectedItem="{Binding SelectedImageStorage}"
+                                          DisplayMemberPath="Label" HorizontalAlignment="Stretch" Margin="0,0,0,12" />
+
+                                <StackPanel IsEnabled="{Binding IsCompressing}">
+                                    <TextBlock Text="{loc:Tr 'Kalite'}" FontSize="12" Margin="0,0,0,4" />
+                                    <ComboBox ItemsSource="{Binding ImageQualityOptions}" SelectedItem="{Binding SelectedImageQuality}"
+                                              DisplayMemberPath="Label" HorizontalAlignment="Stretch" />
+                                </StackPanel>
+
+                                <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Margin="0,8,0,0"
+                                           TextWrapping="Wrap"
+                                           Text="{loc:Tr 'Orijinali silmek en çok yer kazandırır. Sonradan kaliteyi değiştirmek isterseniz aşağıdaki &quot;Orijinalleri yeniden indir&quot; ile Steam görsellerinin orijinallerini geri alabilirsiniz (kapak ve arka plan için oyunu Üst veri getir ile yeniden eşleştirin). Orijinali saklarsanız kopyalar ayrı bir klasörde durur ve yer kazancı olmaz.'}" />
+
+                                <TextBlock Foreground="{DynamicResource SystemFillColorCautionBrush}" FontSize="12" Margin="0,8,0,0"
+                                           TextWrapping="Wrap"
+                                           Text="{loc:Tr 'Görsel ayarı değişti: mevcut görseller bir sonraki açılışta dönüştürülür. Hemen uygulamak için aşağıdaki düğmeyi kullanın.'}">
+                                    <TextBlock.Visibility>
+                                        <Binding Path="IsImageChangePending" Converter="{StaticResource NullToVisibilityConverter}" />
+                                    </TextBlock.Visibility>
+                                </TextBlock>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                    <ui:Button Content="{loc:Tr 'Kalite optimizasyonu yap'}" Command="{Binding OptimizeNowCommand}"
+                                               IsEnabled="{Binding CanOptimizeNow}" Margin="0,0,8,0" />
+                                    <ui:Button Content="{loc:Tr 'Orijinaller klasörünü aç'}" Command="{Binding OpenOriginalsFolderCommand}" />
+                                </StackPanel>
+
+                                <TextBlock Text="{loc:Tr 'Orijinaller'}" FontWeight="SemiBold" Margin="0,16,0,4" />
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:Button Content="{loc:Tr 'Orijinalleri yeniden indir'}" Command="{Binding RedownloadOriginalsCommand}"
+                                               IsEnabled="{Binding CanManageOriginals}" Margin="0,0,8,0" />
+                                    <ui:Button Content="{loc:Tr 'Orijinallerden yeniden sıkıştır'}" Command="{Binding RecompressFromOriginalsCommand}"
+                                               IsEnabled="{Binding CanManageOriginals}" />
+                                </StackPanel>
+                                <ui:Button Content="{loc:Tr 'Tüm verileri orijinaliyle değiştir'}" Command="{Binding RestoreAllOriginalsCommand}"
+                                           IsEnabled="{Binding CanManageOriginals}" Appearance="Primary" Margin="0,8,0,0" />
+                                <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Margin="0,6,0,0"
+                                           TextWrapping="Wrap"
+                                           Text="{loc:Tr 'Görseller, klipler, kapaklar ve arka planların hepsini sıkıştırılmamış orijinaliyle değiştirir: saklanan orijinaller geri taşınır, kalanlar yeniden indirilir (disk kullanımı artar). Sonra sıkıştırma kapatılır.'}" />
+                                <TextBlock Text="{Binding OriginalsText}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource SystemFillColorSuccessBrush}">
+                                    <TextBlock.Visibility>
+                                        <Binding Path="OriginalsText" Converter="{StaticResource NullToVisibilityConverter}" />
+                                    </TextBlock.Visibility>
+                                </TextBlock>
+                                <TextBlock Text="{Binding OptimizeText}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource SystemFillColorSuccessBrush}">
+                                    <TextBlock.Visibility>
+                                        <Binding Path="OptimizeText" Converter="{StaticResource NullToVisibilityConverter}" />
+                                    </TextBlock.Visibility>
+                                </TextBlock>
+                                <TextBlock Text="{Binding CacheUsageText}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                                <TextBlock Text="{loc:Tr 'Optimizasyon geçmişi (oyun bazlı)'}" FontWeight="SemiBold" Margin="0,18,0,4" />
+                                <TextBlock Text="{Binding OptimizationSummary}" FontSize="12" Margin="0,0,0,8" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Text="{loc:Tr 'Henüz sıkıştırılmış görsel yok.'}" FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                                    <TextBlock.Visibility>
+                                        <Binding Path="HasOptimizationRows" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                                    </TextBlock.Visibility>
+                                </TextBlock>
+                                <ItemsControl ItemsSource="{Binding OptimizationRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:OptimizationRow}">
+                                            <Border Padding="0,8" BorderThickness="0,0,0,1"
+                                                    BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+                                                <StackPanel>
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding Game}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,0,110,0" />
+                                                        <TextBlock Text="{Binding When}" FontSize="11.5" HorizontalAlignment="Right"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding Last}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                    <TextBlock Text="{Binding Total}" FontSize="12" TextWrapping="Wrap"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </ctrl:ColumnFlowPanel>
                 </ScrollViewer>
+            </TabItem>
+            <TabItem Header="{loc:Tr 'Yedekleme'}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" DataContext="{Binding Backup}">
+                    <ctrl:ColumnFlowPanel Margin="0,16,0,16">
+                    <TextBlock Text="{loc:Tr 'Otomatik yedekleme'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Kütüphane, ayarlar ve görseller tek bir zip dosyasında yedeklenir. Oyun çalışırken yedek alınmaz, sonra denenir. Steam anahtarı şifreli kalır ve yalnızca bu Windows hesabında açılır.'}" />
+                            <CheckBox Content="{loc:Tr 'Günlük'}" IsChecked="{Binding DailyEnabled}" />
+                            <CheckBox Content="{loc:Tr 'Haftalık'}" IsChecked="{Binding WeeklyEnabled}" />
+                            <CheckBox Content="{loc:Tr 'Aylık'}" IsChecked="{Binding MonthlyEnabled}" />
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="90" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{loc:Tr 'Tutulacak yedek sayısı (her tür için)'}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding KeepOptions}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                                          SelectedValue="{Binding KeepCount}" HorizontalAlignment="Stretch" />
+                            </Grid>
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Yeni bir yedek alındığında, her türün bu sayıdan eski yedekleri silinir. Elle aldığınız yedekler silinmez.'}" />
+                            <CheckBox Content="{loc:Tr 'Görselleri ve kapakları da yedekle (daha büyük)'}" IsChecked="{Binding IncludeMedia}" Margin="0,8,0,0" />
+                            <TextBlock Text="{loc:Tr 'Yedek klasörü'}" FontSize="12" Margin="0,12,0,4" />
+                            <TextBlock Text="{Binding FolderText}" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" />
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <ui:Button Content="{loc:Tr 'Klasörü seç…'}" Command="{Binding ChooseFolderCommand}" Margin="0,0,8,0" />
+                                <ui:Button Content="{loc:Tr 'Klasörü aç'}" Command="{Binding OpenFolderCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="{loc:Tr 'Yedekle ve geri yükle'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="{loc:Tr 'Şimdi yedekle'}" Icon="{ui:SymbolIcon ArrowDownload24}" Appearance="Primary"
+                                           Command="{Binding BackupNowCommand}" Margin="0,0,8,0" />
+                                <ui:Button Content="{loc:Tr 'Yedek yükle…'}" Icon="{ui:SymbolIcon ArrowUpload24}"
+                                           Command="{Binding RestoreFromFileCommand}"
+                                           ToolTip="{loc:Tr 'Bir yedek zip dosyası seçip geri yükler'}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding Status}" Margin="0,10,0,0" TextWrapping="Wrap" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                <TextBlock.Visibility>
+                                    <Binding Path="Status" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </TextBlock.Visibility>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="{loc:Tr 'Yedekler'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Tr 'Henüz yedek yok.'}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                <TextBlock.Visibility>
+                                    <Binding Path="Items.Count" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                                </TextBlock.Visibility>
+                            </TextBlock>
+                            <ItemsControl ItemsSource="{Binding Items}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock FontWeight="SemiBold" FontSize="13">
+                                                    <Run Text="{Binding KindText, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding DateText, Mode=OneWay}" />
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding SizeText}" FontSize="11.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                            <ui:Button Grid.Column="1" Content="{loc:Tr 'Geri yükle'}" Margin="8,0,6,0" Padding="10,4" FontSize="12"
+                                                       Command="{Binding DataContext.RestoreItemCommand, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
+                                                       CommandParameter="{Binding}" />
+                                            <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon Delete24}" Padding="8,4" ToolTip="{loc:Tr 'Sil'}"
+                                                       Command="{Binding DataContext.DeleteItemCommand, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
+                                                       CommandParameter="{Binding}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                    </ctrl:ColumnFlowPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="{loc:Tr 'Klasör Tara'}">
+                <views:ScanReviewView ShowTitle="False" Margin="0,16,0,0"
+                                      DataContext="{Binding DataContext.ScanReviewViewModel, RelativeSource={RelativeSource AncestorType=Window}}" />
+            </TabItem>
+            <TabItem Header="{loc:Tr 'Debug Konsol'}">
+                <views:DebugConsoleView ShowTitle="False" Margin="0,16,0,0"
+                                        DataContext="{Binding DataContext.DebugConsoleViewModel, RelativeSource={RelativeSource AncestorType=Window}}" />
             </TabItem>
         </TabControl>
     </Grid>

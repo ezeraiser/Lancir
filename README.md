@@ -1,11 +1,11 @@
 # Lancir
 
-A Windows game library launcher (WPF, .NET 8). It scans your game folders, matches games with Steam / SteamGridDB / IGDB
+A Windows game library launcher (WPF, .NET 10). It scans your game folders, matches games with Steam / SteamGridDB / IGDB
 for covers and details, tracks playtime, and can import your Steam library, playtime and achievements.
 
 ## Build
 
-Requires the .NET 8 SDK on Windows.
+Requires the .NET 10 SDK on Windows.
 
 ```
 dotnet build Lancir.sln
@@ -13,7 +13,7 @@ dotnet test Lancir.sln
 dotnet publish src/Lancir.App/Lancir.App.csproj -c Release -r win-x64 --self-contained false -o artifacts/Lancir-win-x64
 ```
 
-The published app needs the .NET 8 Desktop Runtime.
+The published app needs the .NET 10 Desktop Runtime.
 
 ## Keys and settings
 
@@ -27,6 +27,9 @@ computer in `%AppData%\Lancir\settings.json`:
 - **IGDB (Twitch) client id and secret** (optional): a further cover and details fallback, from <https://dev.twitch.tv/console/apps>.
 
 Without any keys, matching with the Steam store still works; the optional sources are simply skipped.
+
+Your library, settings and caches live in `%AppData%\Lancir`. Set the `LANCIR_DATA_DIR` environment variable to use another
+folder instead (to try the app on a copy of your data, or for a portable setup); each data folder gets its own single instance.
 
 ## Layout
 

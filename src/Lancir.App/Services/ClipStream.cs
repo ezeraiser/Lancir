@@ -65,7 +65,9 @@ public sealed class ClipStream : IDisposable
             {
                 LibVLCSharp.Shared.Core.Initialize(Path.Combine(AppContext.BaseDirectory, "libvlc"));
 
-                // CPU decoding with the loop filter skipped keeps a playing clip at a few percent of one core.
+                // CPU decoding with the loop filter skipped keeps a playing clip at a few percent of one core. Hardware decoding
+                // was measured with this build (memory video output, trimmed plugins): d3d11va, dxva2 and "any" used as much CPU
+                // as software decoding, so it is deliberately left off.
                 _libVlc = new LibVLC(
                     "--no-audio", "--avcodec-hw=none", "--avcodec-skiploopfilter=4", "--avcodec-threads=2",
                     "--no-osd", "--no-stats", "--no-video-title-show", "--no-snapshot-preview", "--quiet",

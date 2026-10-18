@@ -77,6 +77,12 @@
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
+            <MenuItem Header="{loc:Tr 'Özel kütüphaneye ekle'}" SubmenuOpened="OnLibrariesSubmenuOpened">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="FolderAdd24" />
+                </MenuItem.Icon>
+                <MenuItem Header="…" IsEnabled="False" />
+            </MenuItem>
             <Separator />
             <MenuItem Header="{loc:Tr 'Kaldır'}"
                       Command="{Binding PlacementTarget.Tag.RemoveGameCommand,
@@ -96,99 +102,43 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,4,0,16">
+        <Grid Grid.Row="0" Margin="0,4,0,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="{loc:Tr 'Kütüphane'}" FontSize="26" FontWeight="SemiBold"
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Column="0" Text="{Binding ScopeTitle}" FontSize="26" FontWeight="SemiBold"
                        VerticalAlignment="Center" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-            <ComboBox ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSortOption}"
-                      DisplayMemberPath="Label" MinWidth="150" Margin="0,0,12,0" ToolTip="{loc:Tr 'Sıralama'}" />
-            <ui:Button Icon="{ui:SymbolIcon Grid24}" ToolTip="{loc:Tr 'Kutucuk görünümü'}" Margin="0,0,4,0"
-                       Command="{Binding SetListViewCommand}" CommandParameter="False">
-                <ui:Button.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="{loc:Tr 'Varsayılan düzene dön'}"
-                                  Command="{Binding PlacementTarget.DataContext.ResetLayoutCommand,
-                                            RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  CommandParameter="False">
-                            <MenuItem.Icon>
-                                <ui:SymbolIcon Symbol="ArrowReset24" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                    </ContextMenu>
-                </ui:Button.ContextMenu>
-                <ui:Button.Style>
-                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                        <Setter Property="Appearance" Value="Secondary" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsListView}" Value="False">
-                                <Setter Property="Appearance" Value="Primary" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ui:Button.Style>
-            </ui:Button>
-            <ui:Button Icon="{ui:SymbolIcon TextBulletListLtr24}" ToolTip="{loc:Tr 'Liste görünümü'}" Margin="0,0,12,0"
-                       Command="{Binding SetListViewCommand}" CommandParameter="True">
-                <ui:Button.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="{loc:Tr 'Varsayılan düzene dön'}"
-                                  Command="{Binding PlacementTarget.DataContext.ResetLayoutCommand,
-                                            RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  CommandParameter="True">
-                            <MenuItem.Icon>
-                                <ui:SymbolIcon Symbol="ArrowReset24" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                    </ContextMenu>
-                </ui:Button.ContextMenu>
-                <ui:Button.Style>
-                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                        <Setter Property="Appearance" Value="Secondary" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsListView}" Value="True">
-                                <Setter Property="Appearance" Value="Primary" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ui:Button.Style>
-            </ui:Button>
-            <ui:Button Icon="{ui:SymbolIcon Add24}" ToolTip="{loc:Tr 'Ekle, içe aktar, eşleştir'}"
-                       Appearance="Primary" VerticalAlignment="Center"
-                       Click="OnAddGameClick">
-                <ui:Button.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="{loc:Tr 'Steam oyunu ekle'}" Command="{Binding AddSteamGameCommand}">
-                            <MenuItem.Icon>
-                                <ui:SymbolIcon Symbol="Games24" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="{loc:Tr 'Elle ekle (exe)'}" Command="{Binding AddGameCommand}">
-                            <MenuItem.Icon>
-                                <ui:SymbolIcon Symbol="Document24" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <Separator />
-                        <MenuItem Header="{loc:Tr 'Steam\'den içe aktar'}" Command="{Binding ImportFromSteamCommand}">
-                            <MenuItem.Icon>
-                                <ui:SymbolIcon Symbol="ArrowDownload24" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="{loc:Tr 'Eşleşmeyen oyunları SteamGridDB / IGDB ile eşleştir'}" Command="{Binding MatchAllCommand}">
-                            <MenuItem.Icon>
-                                <ui:SymbolIcon Symbol="CloudSync24" />
-                            </MenuItem.Icon>
-                            <MenuItem.Visibility>
-                                <Binding Path="HasUnmatchedGames" Converter="{StaticResource NullToVisibilityConverter}" />
-                            </MenuItem.Visibility>
-                        </MenuItem>
-                    </ContextMenu>
-                </ui:Button.ContextMenu>
-            </ui:Button>
-            </StackPanel>
+            <!-- filter chips: pick several; any chosen status, plus favorites when that chip is on -->
+            <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                <ToggleButton IsChecked="{Binding FilterPlaying}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Oynuyorum'}" AutomationProperties.Name="{loc:Tr 'Oynuyorum'}">
+                    <ui:SymbolIcon Symbol="Play24" FontSize="16" />
+                </ToggleButton>
+                <ToggleButton IsChecked="{Binding FilterFinished}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Bitirdim'}" AutomationProperties.Name="{loc:Tr 'Bitirdim'}">
+                    <ui:SymbolIcon Symbol="CheckmarkCircle24" FontSize="16" />
+                </ToggleButton>
+                <ToggleButton IsChecked="{Binding FilterDropped}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Bıraktım'}" AutomationProperties.Name="{loc:Tr 'Bıraktım'}">
+                    <ui:SymbolIcon Symbol="DismissCircle24" FontSize="16" />
+                </ToggleButton>
+                <ToggleButton IsChecked="{Binding FilterBacklog}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Listede'}" AutomationProperties.Name="{loc:Tr 'Listede'}">
+                    <ui:SymbolIcon Symbol="Bookmark24" FontSize="16" />
+                </ToggleButton>
+                <!-- the four statuses add up; favorites is a separate filter on top of them -->
+                <Border Width="2" Height="26" Margin="6,1,12,6" CornerRadius="1" Background="{DynamicResource TextFillColorTertiaryBrush}" Opacity="0.7" />
+                <ToggleButton IsChecked="{Binding FilterFavorites}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Yalnızca favoriler'}" AutomationProperties.Name="{loc:Tr 'Favoriler'}">
+                    <ui:SymbolIcon Symbol="Star24" FontSize="16" />
+                </ToggleButton>
+                <ui:Button Icon="{ui:SymbolIcon FilterDismiss24}" Command="{Binding ClearFiltersCommand}" Appearance="Transparent" Padding="10,7" Margin="0,0,6,6"
+                           ToolTip="{loc:Tr 'Filtreyi temizle'}" AutomationProperties.Name="{loc:Tr 'Filtreyi temizle'}">
+                    <ui:Button.Visibility>
+                        <Binding Path="HasActiveFilter" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </ui:Button.Visibility>
+                </ui:Button>
+            </WrapPanel>
         </Grid>
 
         <ui:InfoBar Grid.Row="1" Severity="Error" Title="{loc:Tr 'Hata'}" IsOpen="{Binding IsErrorOpen, Mode=TwoWay}"
@@ -201,6 +151,16 @@
         <Grid Grid.Row="2">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <StackPanel.Visibility>
+                    <Binding Path="IsScopeEmpty" Converter="{StaticResource NullToVisibilityConverter}" />
+                </StackPanel.Visibility>
+                <ui:SymbolIcon Symbol="Library24" FontSize="40" Foreground="{DynamicResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                <TextBlock Text="{loc:Tr 'Bu kütüphanede oyun yok'}" FontSize="15" Margin="0,12,0,4" HorizontalAlignment="Center" />
+                <TextBlock Text="{loc:Tr 'Oyunların sağ tık menüsünden ya da durum seçiminden ekleyebilirsiniz'}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel.Visibility>
                     <Binding Path="Games.Count" Converter="{StaticResource NullToVisibilityConverter}"
                              ConverterParameter="Invert" />
                 </StackPanel.Visibility>
@@ -209,7 +169,7 @@
                                HorizontalAlignment="Center" />
                 <TextBlock Text="{loc:Tr 'Henüz kütüphanenizde oyun yok'}" FontSize="15" Margin="0,12,0,4"
                            HorizontalAlignment="Center" />
-                <TextBlock Text="{loc:Tr '&quot;Klasör Tara&quot; sekmesinden başlayın'}"
+                <TextBlock Text="{loc:Tr 'Ayarlar → Klasör Tara bölümünden başlayın'}"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            HorizontalAlignment="Center" />
             </StackPanel>
@@ -218,7 +178,7 @@
                 <ScrollViewer.Visibility>
                     <Binding Path="IsListView" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
                 </ScrollViewer.Visibility>
-                <ItemsControl ItemsSource="{Binding Games}">
+                <ItemsControl ItemsSource="{Binding GamesView}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel Orientation="Horizontal" />
@@ -262,7 +222,7 @@
                                                 <ui:SymbolIcon Symbol="ImageProhibited24" FontSize="28"
                                                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                <Image ctrl:AsyncImage.DecodeWidth="360" ctrl:AsyncImage.Source="{Binding CoverImagePath}"
+                                                <Image ctrl:AsyncImage.DecodeWidth="360" ctrl:AsyncImage.Source="{Binding CoverImagePath}" ctrl:AsyncImage.Stamp="{Binding CoverStamp}"
                                                        Stretch="UniformToFill" />
                                             </Grid>
                                         </Border>
@@ -281,7 +241,8 @@
                                     <StackPanel Margin="10,10,10,12">
                                         <TextBlock Text="{Binding DisplayName}" Margin="0,0,0,4"
                                                    Style="{StaticResource GameNameCardStyle}"
-                                                   TextTrimming="CharacterEllipsis" />
+                                                   MinHeight="{Binding CardTwoLineHeight, Source={x:Static svc:GameNameAppearance.Instance}}"
+                                                   ToolTip="{Binding DisplayName}" />
 
                                         <TextBlock Text="{Binding PlaytimeText}" FontSize="8"
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -302,10 +263,10 @@
                 <ScrollViewer.Visibility>
                     <Binding Path="IsListView" Converter="{StaticResource NullToVisibilityConverter}" />
                 </ScrollViewer.Visibility>
-                <ItemsControl ItemsSource="{Binding Games}">
+                <ItemsControl ItemsSource="{Binding GamesView}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:LibraryGameViewModel}">
-                            <Border Margin="0,0,16,8" Height="96" Padding="8"
+                            <Border Margin="0,0,16,3" MinHeight="46" Padding="6,4"
                                     Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     AllowDrop="True" PreviewMouseLeftButtonDown="OnItemMouseDown" MouseMove="OnItemMouseMove"
                                     DragEnter="OnItemDragOver" DragOver="OnItemDragOver" DragLeave="OnItemDragLeave" Drop="OnItemDrop"
@@ -329,32 +290,25 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <Grid x:Name="ListCoverGrid" Grid.Column="0" Width="64" Margin="0,0,14,0">
-                                        <Border CornerRadius="6" ClipToBounds="True"
+                                    <Grid x:Name="ListCoverGrid" Grid.Column="0" Width="30" Margin="0,0,12,0">
+                                        <Border CornerRadius="4" ClipToBounds="True"
                                                 Background="{DynamicResource ControlFillColorSecondaryBrush}">
-                                            <Image ctrl:AsyncImage.DecodeWidth="140" ctrl:AsyncImage.Source="{Binding CoverImagePath}"
+                                            <Image ctrl:AsyncImage.DecodeWidth="80" ctrl:AsyncImage.Source="{Binding CoverImagePath}" ctrl:AsyncImage.Stamp="{Binding CoverStamp}"
                                                    Stretch="UniformToFill" />
                                         </Border>
                                         <Button x:Name="ListPlayButton" Style="{StaticResource PlayOverlayButtonStyle}"
-                                                Width="34" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                 Command="{Binding DataContext.LaunchGameCommand,
                                                           RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}">
-                                            <ui:SymbolIcon Symbol="Play24" Filled="True" FontSize="14" />
+                                            <ui:SymbolIcon Symbol="Play24" Filled="True" FontSize="10" />
                                         </Button>
                                     </Grid>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding DisplayName}" Style="{StaticResource GameNameListStyle}"
-                                                   TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Text="{Binding PlaytimeText}" FontSize="8" Margin="0,2,0,0"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                   ToolTip="{Binding DisplayName}" />
                                     </StackPanel>
-                                    <TextBlock Grid.Column="2" Text="{Binding Genres}" FontSize="11"
-                                               VerticalAlignment="Center" Margin="12,0,8,0" MaxWidth="260"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               TextTrimming="CharacterEllipsis" />
                                 </Grid>
                             </Border>
                             <DataTemplate.Triggers>

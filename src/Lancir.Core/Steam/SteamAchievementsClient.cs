@@ -90,19 +90,19 @@ public sealed class SteamAchievementsClient : ISteamAchievementsClient
                 cancellationToken);
             var playerBody = await playerResponse.Content.ReadAsStringAsync(cancellationToken);
 
+            // A game the account does not have answers "no stats": its achievements are still shown, all locked (the list and the
+            // rarity do not depend on owning the game; this is also how a game from another store matched to a Steam id looks).
             var failure = ClassifyPlayerResponse(playerResponse.StatusCode, playerBody);
-            if (failure is { } status)
+            // Steam also answers "Profile is not public" for a game that is not in the account, so that one is treated the same way
+            // (a profile that really is private is reported by the Steam import in Settings).
+            if (failure is { } status && status is not (AchievementsStatus.NoAchievements or AchievementsStatus.Private))
             {
                 return AchievementsView.Empty(status);
             }
 
-            var player = ParsePlayerAchievements(playerBody);
-            if (player.Count == 0)
-            {
-                return AchievementsView.Empty(AchievementsStatus.NoAchievements);
-            }
+            var player = failure is null ? ParsePlayerAchievements(playerBody) : [];
 
-            // Texts/icons and rarity are decoration: if either request fails the achievements are still shown.
+            // Texts/icons and rarity are decoration when the player has the list: if either request fails the achievements are still shown.
             var schemaTask = FetchOrNullAsync(
                 $"{ApiBase}ISteamUserStats/GetSchemaForGame/v2/?key={key}&appid={appId}&l={lang}", cancellationToken);
             var percentTask = FetchOrNullAsync(
@@ -115,6 +115,15 @@ public sealed class SteamAchievementsClient : ISteamAchievementsClient
             var percentages = await percentTask is { } percentJson
                 ? ParseGlobalPercentages(percentJson)
                 : new Dictionary<string, double>();
+
+            if (player.Count == 0)
+            {
+                player = schema.Keys.Select(name => new PlayerAchievement(name, false, null, "", "")).ToList();
+                if (player.Count == 0)
+                {
+                    return AchievementsView.Empty(AchievementsStatus.NoAchievements);
+                }
+            }
 
             return new AchievementsView(AchievementsStatus.Ok, Merge(player, schema, percentages), DateTime.UtcNow, false);
         }

@@ -50,6 +50,10 @@ public sealed partial class GameNameAppearance : ObservableObject
     [NotifyPropertyChangedFor(nameof(CardFontSize))]
     [NotifyPropertyChangedFor(nameof(ListFontSize))]
     [NotifyPropertyChangedFor(nameof(DetailsFontSize))]
+    [NotifyPropertyChangedFor(nameof(CardLineHeight))]
+    [NotifyPropertyChangedFor(nameof(CardTwoLineHeight))]
+    [NotifyPropertyChangedFor(nameof(ListLineHeight))]
+    [NotifyPropertyChangedFor(nameof(ListTwoLineHeight))]
     private double _baseSize = DefaultSize;
 
     [ObservableProperty]
@@ -63,6 +67,16 @@ public sealed partial class GameNameAppearance : ObservableObject
     public FontFamily? CustomFontFamily => HasCustomFont ? new FontFamily(SelectedFont) : null;
 
     public double CardFontSize => BaseSize;
+
+    // A name may take two lines and no more: fixed line heights make the space it needs predictable (a tile reserves two lines so
+    // all tiles stay the same height; a longer name ends in "…").
+    public double CardLineHeight => Math.Round(BaseSize * 1.35);
+
+    public double CardTwoLineHeight => CardLineHeight * 2;
+
+    public double ListLineHeight => Math.Round((BaseSize - 1) * 1.3);
+
+    public double ListTwoLineHeight => ListLineHeight * 2;
 
     public double ListFontSize => BaseSize - 1;
 

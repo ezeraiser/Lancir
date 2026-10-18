@@ -24,7 +24,8 @@ public static class AvifSupport
 
         try
         {
-            var decoder = BitmapDecoder.Create(new Uri(path), BitmapCreateOptions.None, BitmapCacheOption.None);
+            using var stream = File.OpenRead(path); // closed on return, so the file is never left locked
+            var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.None);
             _ = decoder.Frames[0].PixelWidth;
             _works = true;
             return false;

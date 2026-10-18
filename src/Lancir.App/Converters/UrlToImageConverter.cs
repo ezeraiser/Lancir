@@ -14,6 +14,12 @@ public sealed class UrlToImageConverter : IValueConverter
             return null;
         }
 
+        if (uri.IsFile && uri.LocalPath.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+        {
+            int.TryParse(parameter as string, out var webpWidth);
+            return Lancir.App.Services.ImageLoader.DecodeFileNow(uri.LocalPath, webpWidth);
+        }
+
         try
         {
             var image = new BitmapImage();

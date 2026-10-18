@@ -51,12 +51,61 @@ public partial class GamePanelView : UserControl
                     {
                         Dispatcher.BeginInvoke(() => Viewer.Focus(), System.Windows.Threading.DispatcherPriority.Input);
                     }
+
+                    if (args.PropertyName == nameof(GamePanelViewModel.IsVideoOpen) && panel.IsVideoOpen)
+                    {
+                        Dispatcher.BeginInvoke(() => VideoViewer.Focus(), System.Windows.Threading.DispatcherPriority.Input);
+                    }
                 };
             }
         };
     }
 
     private GamePanelViewModel? Panel => DataContext as GamePanelViewModel;
+
+    // ---- the video viewer's seek bar: the user dragging it moves the video; otherwise the clock moves the bar ----
+
+    private void OnVideoControlsMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // The slider moves its thumb in its own mouse-down handling, which runs before any handler placed on the slider itself:
+        // so "the user is on the bar" is noted one level up, before the bar reacts.
+        if (Panel is { } panel && e.OriginalSource is DependencyObject source && IsInside(source, VideoSeekBar))
+        {
+            panel.VideoScrubbing = true;
+        }
+    }
+
+    private static bool IsInside(DependencyObject? element, DependencyObject container)
+    {
+        for (; element is not null; element = element is Visual or System.Windows.Media.Media3D.Visual3D
+                 ? System.Windows.Media.VisualTreeHelper.GetParent(element)
+                 : LogicalTreeHelper.GetParent(element))
+        {
+            if (ReferenceEquals(element, container))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void OnVideoSeekChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (Panel is { VideoScrubbing: true } panel)
+        {
+            panel.PreviewVideoSeek(e.NewValue);
+        }
+    }
+
+    private void OnVideoMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (Panel is { VideoScrubbing: true } panel)
+        {
+            panel.VideoScrubbing = false;
+            panel.SeekVideo(VideoSeekBar.Value); // the video jumps when the bar is let go
+        }
+    }
 
     /// <summary>
     /// Whatever control takes focus by itself (e.g. a text box far down the cards when the window
@@ -200,6 +249,88 @@ public partial class GamePanelView : UserControl
     }
 
     private void OnResetLayoutMenuClick(object sender, RoutedEventArgs e) => Panel?.ResetLayout();
+
+    private void OnApplyLayoutToAllMenuClick(object sender, RoutedEventArgs e) => Panel?.ApplyLayoutToAllGames();
+
+    private void OnToggleCardHiddenClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: DetailCardViewModel card })
+        {
+            Panel?.ToggleCardHidden(card);
+        }
+    }
+
+    // ---- the corner handle of a card: width snaps to columns, height to rows ----
+
+    private double _resizeStartWidth;
+    private double _resizeStartHeight;
+    private double _resizeDx;
+    private double _resizeDy;
+
+    private void OnCardResizeStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+    {
+        var card = FindAncestor<Border>(sender as DependencyObject, "CardBorder");
+        _resizeStartWidth = card?.ActualWidth ?? 0;
+        _resizeStartHeight = card?.ActualHeight ?? 0;
+        _resizeDx = _resizeDy = 0;
+    }
+
+    private void OnCardResizeDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: DetailCardViewModel card } || Panel is null ||
+            FindChild<MasonryPanel>(CardsHost) is not { ColumnWidthPx: > 0 } masonry)
+        {
+            return;
+        }
+
+        _resizeDx += e.HorizontalChange;
+        _resizeDy += e.VerticalChange;
+        var gap = MasonryPanel.Spacing;
+        var span = (int)Math.Round((_resizeStartWidth + _resizeDx + gap) / (masonry.ColumnWidthPx + gap));
+        var rows = (int)Math.Round((_resizeStartHeight + _resizeDy + gap) / (MasonryPanel.RowUnit + gap));
+        Panel.SetCardShape(card, span, rows);
+        masonry.InvalidateMeasure();
+    }
+
+    private void OnCardResizeCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) => Panel?.SaveCardShape();
+
+    private void OnResetCardHeightClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: DetailCardViewModel card })
+        {
+            Panel?.ResetCardHeight(card);
+            FindChild<MasonryPanel>(CardsHost)?.InvalidateMeasure();
+        }
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? start, string name) where T : FrameworkElement
+    {
+        for (var element = start; element is not null; element = VisualTreeHelper.GetParent(element))
+        {
+            if (element is T match && match.Name == name)
+            {
+                return match;
+            }
+        }
+
+        return null;
+    }
+
+    private void OnSpanMinusClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: DetailCardViewModel card })
+        {
+            Panel?.ChangeCardSpan(card, -1);
+        }
+    }
+
+    private void OnSpanPlusClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: DetailCardViewModel card })
+        {
+            Panel?.ChangeCardSpan(card, 1);
+        }
+    }
 
     private void OnResizeClick(object sender, RoutedEventArgs e)
     {

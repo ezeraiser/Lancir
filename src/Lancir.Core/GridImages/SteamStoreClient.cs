@@ -105,9 +105,9 @@ public sealed partial class SteamStoreClient : ISteamStoreClient
             {
                 var movie = movies[0];
                 trailerThumb = GetString(movie, "thumbnail");
-                // Steam now serves trailers only as streaming manifests, which a browser cannot play from a link,
-                // so the trailer opens the store page (where the video plays); mp4/webm links are used when present.
-                trailerUrl = GetNested(movie, "mp4", "max") ?? GetNested(movie, "mp4", "480")
+                // Steam serves trailers as streaming manifests (HLS), which the app's own video viewer plays; an mp4/webm link is used
+                // when there is one, and the store page (where the video plays in a browser) when there is nothing else.
+                trailerUrl = GetString(movie, "hls_h264") ?? GetNested(movie, "mp4", "max") ?? GetNested(movie, "mp4", "480")
                              ?? GetNested(movie, "webm", "max") ?? GetNested(movie, "webm", "480")
                              ?? $"https://store.steampowered.com/app/{appId}/";
             }

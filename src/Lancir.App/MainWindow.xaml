@@ -24,6 +24,93 @@
             <Setter Property="Padding" Value="10,9" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
         </Style>
+        <ContextMenu x:Key="NavViewMenu">
+            <MenuItem Header="{loc:Tr 'Kutucuk düzenini varsayılana döndür'}" Command="{Binding LibraryViewModel.ResetLayoutCommand}" CommandParameter="False">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="ArrowReset24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Liste düzenini varsayılana döndür'}" Command="{Binding LibraryViewModel.ResetLayoutCommand}" CommandParameter="True">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="ArrowReset24" />
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+        <ContextMenu x:Key="NavAddMenu">
+            <MenuItem Header="{loc:Tr 'Steam oyunu ekle'}" Command="{Binding LibraryViewModel.AddSteamGameCommand}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Games24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Elle ekle (exe)'}" Command="{Binding LibraryViewModel.AddGameCommand}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Document24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Özel kütüphane'}" Command="{Binding LibraryViewModel.CreateCustomLibraryCommand}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="FolderAdd24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="{loc:Tr 'Steam\'den içe aktar'}" Command="{Binding LibraryViewModel.ImportFromSteamCommand}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="ArrowDownload24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Eşleşmeyen oyunları SteamGridDB / IGDB ile eşleştir'}" Command="{Binding LibraryViewModel.MatchAllCommand}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="CloudSync24" />
+                </MenuItem.Icon>
+                <MenuItem.Visibility>
+                    <Binding Path="LibraryViewModel.HasUnmatchedGames" Converter="{StaticResource NullToVisibilityConverter}" />
+                </MenuItem.Visibility>
+            </MenuItem>
+        </ContextMenu>
+        <ContextMenu x:Key="NavSortMenu" ItemsSource="{Binding LibraryViewModel.SortOptions}">
+            <ContextMenu.ItemContainerStyle>
+                <Style TargetType="MenuItem">
+                    <Setter Property="Header" Value="{Binding Label}" />
+                    <Setter Property="Command" Value="{Binding DataContext.LibraryViewModel.SelectSortCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <Setter Property="CommandParameter" Value="{Binding}" />
+                </Style>
+            </ContextMenu.ItemContainerStyle>
+        </ContextMenu>
+        <ContextMenu x:Key="NavScopeMenu" x:Shared="False">
+            <MenuItem Header="{loc:Tr 'Yeniden adlandır'}" Click="OnScopeRenameClick">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Rename24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Simgeyi değiştir'}" Click="OnScopeIconClick">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Image24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Kütüphaneyi sil'}" Click="OnScopeDeleteClick">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Delete24" />
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+        <Style x:Key="NavScopeStyle" TargetType="ui:Button" BasedOn="{StaticResource NavButtonBase}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding DataContext.IsNavCollapsed, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                    <Setter Property="Padding" Value="0,9" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsCustom}" Value="True">
+                    <Setter Property="ContextMenu" Value="{StaticResource NavScopeMenu}" />
+                </DataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsSelected}" Value="True" />
+                        <Condition Binding="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}}" Value="Library" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Appearance" Value="Secondary" />
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="NavLibraryStyle" TargetType="ui:Button" BasedOn="{StaticResource NavButtonBase}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}}" Value="Library">
@@ -31,23 +118,9 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="NavScanReviewStyle" TargetType="ui:Button" BasedOn="{StaticResource NavButtonBase}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}}" Value="ScanReview">
-                    <Setter Property="Appearance" Value="Secondary" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
         <Style x:Key="NavSettingsStyle" TargetType="ui:Button" BasedOn="{StaticResource NavButtonBase}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}}" Value="Settings">
-                    <Setter Property="Appearance" Value="Secondary" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-        <Style x:Key="NavDebugConsoleStyle" TargetType="ui:Button" BasedOn="{StaticResource NavButtonBase}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}}" Value="DebugConsole">
                     <Setter Property="Appearance" Value="Secondary" />
                 </DataTrigger>
             </Style.Triggers>
@@ -60,12 +133,36 @@
         </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0" Title="Lancir" ShowMaximize="True" ShowMinimize="True">
+            <ui:TitleBar.TrailingContent>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <ui:Button x:Name="ZoomButton" Appearance="Transparent" Padding="10,4" FontSize="12" MinWidth="64"
+                               Icon="{ui:SymbolIcon ZoomOut24}" Click="OnZoomButtonClick" ToolTip="{loc:Tr 'Arayüz boyutu'}" />
+                    <Popup x:Name="ZoomPopup" PlacementTarget="{Binding ElementName=ZoomButton}" Placement="Bottom" StaysOpen="False"
+                           AllowsTransparency="True" PopupAnimation="Fade">
+                        <Border Background="{DynamicResource ApplicationBackgroundBrush}" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="8"
+                                BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+                            <StackPanel Width="210">
+                                <Grid Margin="0,0,0,6">
+                                    <TextBlock Text="{loc:Tr 'Arayüz boyutu'}" FontSize="12" />
+                                    <TextBlock x:Name="ZoomValueText" FontSize="12" HorizontalAlignment="Right" />
+                                </Grid>
+                                <Slider x:Name="ZoomSlider" Minimum="50" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True"
+                                        ValueChanged="OnZoomSliderChanged" />
+                                <ui:Button Content="{loc:Tr 'Varsayılana dön'}" Click="OnZoomResetClick" HorizontalAlignment="Left" Margin="0,8,0,0" Padding="10,4" FontSize="12" />
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                </StackPanel>
+            </ui:TitleBar.TrailingContent>
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Assets/Lancir.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
         <Grid Grid.Row="1" x:Name="ContentGrid" SizeChanged="OnContentGridSizeChanged">
+            <Grid.LayoutTransform>
+                <ScaleTransform x:Name="ZoomTransform" ScaleX="1" ScaleY="1" />
+            </Grid.LayoutTransform>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="NavColumn">
                     <ColumnDefinition.Width>
@@ -73,17 +170,17 @@
                                  ConverterParameter="56|220" />
                     </ColumnDefinition.Width>
                 </ColumnDefinition>
-                <ColumnDefinition Width="*" MinWidth="360" />
+                <ColumnDefinition Width="*" MinWidth="{Binding LibraryMinWidth}" />
                 <ColumnDefinition>
                     <ColumnDefinition.Width>
-                        <Binding Path="LibraryViewModel.HasSelectedGame" Converter="{StaticResource BoolToGridLengthConverter}"
+                        <Binding Path="ShowDetailsPane" Converter="{StaticResource BoolToGridLengthConverter}"
                                  ConverterParameter="6|0" />
                     </ColumnDefinition.Width>
                 </ColumnDefinition>
                 <ColumnDefinition x:Name="DetailsPaneColumn">
                     <ColumnDefinition.Width>
                         <MultiBinding Converter="{StaticResource PaneOpenWidthConverter}" Mode="TwoWay">
-                            <Binding Path="LibraryViewModel.HasSelectedGame" />
+                            <Binding Path="ShowDetailsPane" />
                             <Binding Path="DetailsPaneWidth" Mode="TwoWay" />
                         </MultiBinding>
                     </ColumnDefinition.Width>
@@ -108,57 +205,114 @@
                     </ui:Button.Style>
                 </ui:Button>
 
-                <ui:Button DockPanel.Dock="Top" Content="{loc:Tr 'Kütüphane'}" Icon="{ui:SymbolIcon XboxController24}" Style="{StaticResource NavLibraryStyle}"
-                           Command="{Binding GoToLibraryCommand}">
+                <!-- the + above the libraries: add games, import, match, make a library of your own -->
+                <ui:Button DockPanel.Dock="Top" Content="{loc:Tr 'Ekle'}" Icon="{ui:SymbolIcon Add24}" Style="{StaticResource NavButtonBase}"
+                           Click="OnNavMenuClick" ContextMenu="{StaticResource NavAddMenu}" ToolTip="{loc:Tr 'Ekle, içe aktar, eşleştir'}">
                     <ui:Button.Visibility>
                         <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
                     </ui:Button.Visibility>
                 </ui:Button>
-                <ui:Button DockPanel.Dock="Top" Icon="{ui:SymbolIcon XboxController24}" HorizontalContentAlignment="Center" Padding="0,9" ToolTip="{loc:Tr 'Kütüphane'}" Style="{StaticResource NavLibraryStyle}"
-                           Command="{Binding GoToLibraryCommand}">
+                <ui:Button DockPanel.Dock="Top" Icon="{ui:SymbolIcon Add24}" HorizontalContentAlignment="Center" Padding="0,9" ToolTip="{loc:Tr 'Ekle, içe aktar, eşleştir'}"
+                           Style="{StaticResource NavButtonBase}" Click="OnNavMenuClick" ContextMenu="{StaticResource NavAddMenu}">
                     <ui:Button.Visibility>
                         <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" />
                     </ui:Button.Visibility>
                 </ui:Button>
 
-                <ui:Button DockPanel.Dock="Top" Content="{loc:Tr 'Klasör Tara'}" Icon="{ui:SymbolIcon FolderSearch24}" Style="{StaticResource NavScanReviewStyle}"
-                           Command="{Binding GoToScanReviewCommand}">
-                    <ui:Button.Visibility>
-                        <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
-                    </ui:Button.Visibility>
-                </ui:Button>
-                <ui:Button DockPanel.Dock="Top" Icon="{ui:SymbolIcon FolderSearch24}" HorizontalContentAlignment="Center" Padding="0,9" ToolTip="{loc:Tr 'Klasör Tara'}" Style="{StaticResource NavScanReviewStyle}"
-                           Command="{Binding GoToScanReviewCommand}">
-                    <ui:Button.Visibility>
-                        <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" />
-                    </ui:Button.Visibility>
-                </ui:Button>
+                <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding LibraryViewModel.Scopes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ui:Button Style="{StaticResource NavScopeStyle}" ToolTip="{Binding Title}" AutomationProperties.Name="{Binding Title}"
+                                       AllowDrop="True" PreviewMouseLeftButtonDown="OnScopeMouseDown" MouseMove="OnScopeMouseMove"
+                                       DragOver="OnScopeDragOver" Drop="OnScopeDrop"
+                                       Command="{Binding DataContext.SelectScopeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       CommandParameter="{Binding}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Grid Width="18" Height="18">
+                                        <ui:SymbolIcon Symbol="{Binding Symbol}" FontSize="18">
+                                            <ui:SymbolIcon.Visibility>
+                                                <Binding Path="HasPicture" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                                            </ui:SymbolIcon.Visibility>
+                                        </ui:SymbolIcon>
+                                        <Image Source="{Binding IconPath}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality">
+                                            <Image.Visibility>
+                                                <Binding Path="HasPicture" Converter="{StaticResource NullToVisibilityConverter}" />
+                                            </Image.Visibility>
+                                        </Image>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Title}" Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="140">
+                                        <TextBlock.Visibility>
+                                            <Binding Path="DataContext.IsNavCollapsed" RelativeSource="{RelativeSource AncestorType=Window}"
+                                                     Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                                        </TextBlock.Visibility>
+                                    </TextBlock>
+                                </StackPanel>
+                            </ui:Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-                <ui:Button DockPanel.Dock="Top" Content="{loc:Tr 'Ayarlar'}" Icon="{ui:SymbolIcon Settings24}" Style="{StaticResource NavSettingsStyle}"
+                <!-- the pages other than the library sit at the bottom of the strip (lowest first: Debug, Ayarlar, Klasör Tara above them) -->
+                <ui:Button DockPanel.Dock="Bottom" Content="{loc:Tr 'Ayarlar'}" Icon="{ui:SymbolIcon Settings24}" Style="{StaticResource NavSettingsStyle}"
                            Command="{Binding GoToSettingsCommand}">
                     <ui:Button.Visibility>
                         <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
                     </ui:Button.Visibility>
                 </ui:Button>
-                <ui:Button DockPanel.Dock="Top" Icon="{ui:SymbolIcon Settings24}" HorizontalContentAlignment="Center" Padding="0,9" ToolTip="{loc:Tr 'Ayarlar'}" Style="{StaticResource NavSettingsStyle}"
+                <ui:Button DockPanel.Dock="Bottom" Icon="{ui:SymbolIcon Settings24}" HorizontalContentAlignment="Center" Padding="0,9" ToolTip="{loc:Tr 'Ayarlar'}" Style="{StaticResource NavSettingsStyle}"
                            Command="{Binding GoToSettingsCommand}">
                     <ui:Button.Visibility>
                         <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" />
                     </ui:Button.Visibility>
                 </ui:Button>
 
-                <ui:Button DockPanel.Dock="Top" Content="{loc:Tr 'Debug Konsol'}" Icon="{ui:SymbolIcon Bug24}" Style="{StaticResource NavDebugConsoleStyle}"
-                           Command="{Binding GoToDebugConsoleCommand}">
-                    <ui:Button.Visibility>
-                        <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
-                    </ui:Button.Visibility>
-                </ui:Button>
-                <ui:Button DockPanel.Dock="Top" Icon="{ui:SymbolIcon Bug24}" HorizontalContentAlignment="Center" Padding="0,9" ToolTip="{loc:Tr 'Debug Konsol'}" Style="{StaticResource NavDebugConsoleStyle}"
-                           Command="{Binding GoToDebugConsoleCommand}">
-                    <ui:Button.Visibility>
-                        <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" />
-                    </ui:Button.Visibility>
-                </ui:Button>
+                <!-- the library's own tools (sort, view, add) sit above the pages at the bottom of the strip; only on the library page -->
+                <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,10">
+                    <StackPanel.Visibility>
+                        <Binding Path="SelectedTab" Converter="{StaticResource EnumEqualsToVisibilityConverter}" ConverterParameter="Library" />
+                    </StackPanel.Visibility>
+                    <ui:Button Content="{loc:Tr 'Sırala'}" Icon="{ui:SymbolIcon ArrowSort24}" Style="{StaticResource NavButtonBase}" Click="OnNavMenuClick" ContextMenu="{StaticResource NavSortMenu}">
+                        <ui:Button.Visibility>
+                            <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                        </ui:Button.Visibility>
+                    </ui:Button>
+                    <ui:Button Icon="{ui:SymbolIcon ArrowSort24}" HorizontalContentAlignment="Center" Padding="0,9" ToolTip="{loc:Tr 'Sıralama'}" Style="{StaticResource NavButtonBase}" Click="OnNavMenuClick" ContextMenu="{StaticResource NavSortMenu}">
+                        <ui:Button.Visibility>
+                            <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" />
+                        </ui:Button.Visibility>
+                    </ui:Button>
+                    <StackPanel>
+                        <StackPanel.Visibility>
+                            <Binding Path="LibraryViewModel.IsListView" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                        </StackPanel.Visibility>
+                    <ui:Button Content="{loc:Tr 'Liste görünümü'}" Icon="{ui:SymbolIcon TextBulletListLtr24}" Style="{StaticResource NavButtonBase}" Command="{Binding LibraryViewModel.ToggleListViewCommand}" ContextMenu="{StaticResource NavViewMenu}">
+                        <ui:Button.Visibility>
+                            <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                        </ui:Button.Visibility>
+                    </ui:Button>
+                    <ui:Button Icon="{ui:SymbolIcon TextBulletListLtr24}" HorizontalContentAlignment="Center" Padding="0,9" ToolTip="{loc:Tr 'Liste görünümü'}" Style="{StaticResource NavButtonBase}" Command="{Binding LibraryViewModel.ToggleListViewCommand}" ContextMenu="{StaticResource NavViewMenu}">
+                        <ui:Button.Visibility>
+                            <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" />
+                        </ui:Button.Visibility>
+                    </ui:Button>
+                    </StackPanel>
+                    <StackPanel>
+                        <StackPanel.Visibility>
+                            <Binding Path="LibraryViewModel.IsListView" Converter="{StaticResource NullToVisibilityConverter}" />
+                        </StackPanel.Visibility>
+                    <ui:Button Content="{loc:Tr 'Kutucuk görünümü'}" Icon="{ui:SymbolIcon Grid24}" Style="{StaticResource NavButtonBase}" Command="{Binding LibraryViewModel.ToggleListViewCommand}" ContextMenu="{StaticResource NavViewMenu}">
+                        <ui:Button.Visibility>
+                            <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                        </ui:Button.Visibility>
+                    </ui:Button>
+                    <ui:Button Icon="{ui:SymbolIcon Grid24}" HorizontalContentAlignment="Center" Padding="0,9" ToolTip="{loc:Tr 'Kutucuk görünümü'}" Style="{StaticResource NavButtonBase}" Command="{Binding LibraryViewModel.ToggleListViewCommand}" ContextMenu="{StaticResource NavViewMenu}">
+                        <ui:Button.Visibility>
+                            <Binding Path="IsNavCollapsed" Converter="{StaticResource NullToVisibilityConverter}" />
+                        </ui:Button.Visibility>
+                    </ui:Button>
+                    </StackPanel>
+                </StackPanel>
+
             </DockPanel>
 
             <Grid Grid.Column="1" Margin="0,0,20,20">
@@ -170,13 +324,6 @@
                     </views:LibraryView.Visibility>
                 </views:LibraryView>
 
-                <views:ScanReviewView DataContext="{Binding ScanReviewViewModel}">
-                    <views:ScanReviewView.Visibility>
-                        <Binding Path="DataContext.SelectedTab" RelativeSource="{RelativeSource AncestorType=Window}"
-                                 Converter="{StaticResource EnumEqualsToVisibilityConverter}"
-                                 ConverterParameter="ScanReview" />
-                    </views:ScanReviewView.Visibility>
-                </views:ScanReviewView>
 
                 <views:SettingsView DataContext="{Binding SettingsViewModel}">
                     <views:SettingsView.Visibility>
@@ -186,19 +333,12 @@
                     </views:SettingsView.Visibility>
                 </views:SettingsView>
 
-                <views:DebugConsoleView DataContext="{Binding DebugConsoleViewModel}">
-                    <views:DebugConsoleView.Visibility>
-                        <Binding Path="DataContext.SelectedTab" RelativeSource="{RelativeSource AncestorType=Window}"
-                                 Converter="{StaticResource EnumEqualsToVisibilityConverter}"
-                                 ConverterParameter="DebugConsole" />
-                    </views:DebugConsoleView.Visibility>
-                </views:DebugConsoleView>
             </Grid>
 
             <GridSplitter Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                           Background="Transparent" ShowsPreview="False" DragCompleted="OnSplitterDragCompleted">
                 <GridSplitter.Visibility>
-                    <Binding Path="LibraryViewModel.HasSelectedGame" Converter="{StaticResource NullToVisibilityConverter}" />
+                    <Binding Path="ShowDetailsPane" Converter="{StaticResource NullToVisibilityConverter}" />
                 </GridSplitter.Visibility>
             </GridSplitter>
 
@@ -209,7 +349,7 @@
                     Background="{DynamicResource ApplicationBackgroundBrush}"
                     BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
                 <Border.Visibility>
-                    <Binding Path="LibraryViewModel.SelectedGame" Converter="{StaticResource NullToVisibilityConverter}" />
+                    <Binding Path="ShowDetailsPane" Converter="{StaticResource NullToVisibilityConverter}" />
                 </Border.Visibility>
 
                 <Grid>
@@ -220,12 +360,14 @@
                         <Border.Background>
                             <ImageBrush Stretch="UniformToFill" AlignmentX="Center" AlignmentY="Center"
                                         ctrl:AsyncImage.DecodeWidth="240"
-                                        ctrl:AsyncImage.Source="{Binding LibraryViewModel.SelectedGame.PanelBackgroundPath}" />
+                                        ctrl:AsyncImage.Source="{Binding LibraryViewModel.SelectedGame.PanelBackgroundPath}"
+                                        ctrl:AsyncImage.Stamp="{Binding LibraryViewModel.SelectedGame.PanelBackgroundStamp}" />
                         </Border.Background>
                     </Border>
                     <Image Stretch="Uniform" VerticalAlignment="Top"
                            ctrl:AsyncImage.DecodeWidth="1200"
-                           ctrl:AsyncImage.Source="{Binding LibraryViewModel.SelectedGame.PanelBackgroundPath}">
+                           ctrl:AsyncImage.Source="{Binding LibraryViewModel.SelectedGame.PanelBackgroundPath}"
+                           ctrl:AsyncImage.Stamp="{Binding LibraryViewModel.SelectedGame.PanelBackgroundStamp}">
                         <Image.OpacityMask>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                 <GradientStop Color="#FF000000" Offset="0" />
@@ -249,7 +391,7 @@
                                Click="OnCloseDetailsClick">
                         <!-- the picture viewer has its own close button in the same corner -->
                         <ui:Button.Visibility>
-                            <Binding Path="GamePanelViewModel.IsViewerOpen" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                            <Binding Path="GamePanelViewModel.IsOverlayOpen" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
                         </ui:Button.Visibility>
                     </ui:Button>
 

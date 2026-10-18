@@ -171,7 +171,7 @@ public sealed partial class GamePanelViewModel : ObservableObject
     private static CultureInfo Turkish => AppLanguage.Culture;
     private static readonly Dictionary<string, long> DiskSizeCache = [];
 
-    private static readonly (string Id, string Title, CardSize Size)[] DefaultCards =
+    internal static readonly (string Id, string Title, CardSize Size)[] DefaultCards =
     [
         ("activity", Loc.T("Etkinlik"), CardSize.Full),
         ("info", Loc.T("Künye"), CardSize.Auto),
@@ -224,6 +224,7 @@ public sealed partial class GamePanelViewModel : ObservableObject
         }
 
         LoadCards();
+        DefaultLayoutChanged += LoadCards;
 
         Library.PropertyChanged += OnLibraryPropertyChanged;
         Library.SessionCompleted += gameId =>
@@ -274,6 +275,7 @@ public sealed partial class GamePanelViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsViewerOpen))]
+    [NotifyPropertyChangedFor(nameof(IsOverlayOpen))]
     [NotifyPropertyChangedFor(nameof(ViewerImageUrl))]
     [NotifyPropertyChangedFor(nameof(ViewerCounter))]
     private int _viewerIndex = -1;
@@ -530,6 +532,8 @@ public sealed partial class GamePanelViewModel : ObservableObject
 
     private void AttachGame(LibraryGameViewModel? game)
     {
+        CloseVideo(); // a video of the previous game must not keep playing behind the next one
+
         // Flush edits of the previous game before switching.
         if (_saveTimer.IsEnabled)
         {
@@ -538,6 +542,8 @@ public sealed partial class GamePanelViewModel : ObservableObject
         }
 
         _game = game;
+        IsEditingLayout = false;
+        LoadCards();
         OnPropertyChanged(nameof(Game));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(Notes));
@@ -767,12 +773,42 @@ public sealed partial class GamePanelViewModel : ObservableObject
 
         try
         {
-            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(PathForSystemViewer(path)) { UseShellExecute = true });
         }
         catch (Exception ex)
         {
             Toast(Loc.F("Açılamadı: {0}", ex.Message));
         }
+    }
+
+    /// <summary>
+    /// Windows does not always have a WebP viewer. A WebP picture is therefore opened as a PNG copy made in the temp folder
+    /// (the copy is replaced on every open and cleaned up by Windows' temp cleanup).
+    /// </summary>
+    private static string PathForSystemViewer(string path)
+    {
+        if (!path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+        {
+            return path;
+        }
+
+        var image = WebpThumbnails.TryLoad(path);
+        if (image is null)
+        {
+            return path;
+        }
+
+        var folder = Path.Combine(Path.GetTempPath(), "Lancir");
+        Directory.CreateDirectory(folder);
+        var copy = Path.Combine(folder, Path.GetFileNameWithoutExtension(path) + ".png");
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(image));
+        using (var stream = File.Create(copy))
+        {
+            encoder.Save(stream);
+        }
+
+        return copy;
     }
 
     [RelayCommand]
@@ -783,21 +819,8 @@ public sealed partial class GamePanelViewModel : ObservableObject
             return;
         }
 
-        if (clip.LocalPath is { } path)
-        {
-            try
-            {
-                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                Toast(Loc.F("Açılamadı: {0}", ex.Message));
-            }
-        }
-        else
-        {
-            OpenUrl(clip.Url);
-        }
+        // Played in the app's own viewer (a downloaded clip from disk, otherwise straight from its address).
+        _ = OpenClipInViewerAsync(clip);
     }
 
     /// <summary>The downloaded copy of a Steam media address when there is one, otherwise the address itself.</summary>
@@ -1152,20 +1175,38 @@ public sealed partial class GamePanelViewModel : ObservableObject
 
     // ---- card layout ----
 
-    private void LoadCards()
-    {
-        Cards.Clear();
-        var used = new HashSet<string>();
+    /// <summary>Raised when the default layout is edited in Settings, so a game without its own layout picks it up.</summary>
+    public static event Action? DefaultLayoutChanged;
 
-        foreach (var saved in _settingsService.Load().DetailCards)
+    public static void NotifyDefaultLayoutChanged() => DefaultLayoutChanged?.Invoke();
+
+    /// <summary>True when the selected game has a card layout of its own (not the default one).</summary>
+    [ObservableProperty]
+    private bool _hasOwnLayout;
+
+    /// <summary>The layout in force for the selected game: its own when it has one, otherwise the default from Settings, completed with new cards.</summary>
+    private List<(string Id, string Title, CardSize Size, bool Hidden, int Span, int Rows)> ResolveLayout(out bool own)
+    {
+        var settings = _settingsService.Load();
+        List<DetailCardSetting> saved = settings.DetailCards;
+        own = false;
+        if (_game is not null && settings.GameCardLayouts.TryGetValue(_game.Id, out var gameLayout))
         {
-            var definition = DefaultCards.FirstOrDefault(d => d.Id == saved.Id);
-            if (definition.Id is null || !used.Add(saved.Id) || !Enum.TryParse<CardSize>(saved.Size, out var size))
+            saved = gameLayout;
+            own = true;
+        }
+
+        var result = new List<(string Id, string Title, CardSize Size, bool Hidden, int Span, int Rows)>();
+        var used = new HashSet<string>();
+        foreach (var item in saved)
+        {
+            var definition = DefaultCards.FirstOrDefault(d => d.Id == item.Id);
+            if (definition.Id is null || !used.Add(item.Id) || !Enum.TryParse<CardSize>(item.Size, out var size))
             {
                 continue;
             }
 
-            Cards.Add(new DetailCardViewModel(definition.Id, definition.Title, this, size));
+            result.Add((definition.Id, definition.Title, size, item.Hidden, Math.Clamp(item.Span, 0, 10), Math.Clamp(item.Rows, 0, 40)));
         }
 
         // Cards added in later versions (or missing from the saved layout) go at the end.
@@ -1173,17 +1214,89 @@ public sealed partial class GamePanelViewModel : ObservableObject
         {
             if (used.Add(definition.Id))
             {
-                Cards.Add(new DetailCardViewModel(definition.Id, definition.Title, this, definition.Size));
+                result.Add((definition.Id, definition.Title, definition.Size, false, 0, 0));
             }
+        }
+
+        return result;
+    }
+
+    public static IReadOnlyList<IntOption> CardColumnOptions { get; } =
+    [
+        new(0, Loc.T("Otomatik")), ..Enumerable.Range(1, 10).Select(n => new IntOption(n, n.ToString())),
+    ];
+
+    public static IReadOnlyList<IntOption> GalleryColumnOptions { get; } = [.. Enumerable.Range(2, 9).Select(n => new IntOption(n, n.ToString()))];
+
+    /// <summary>Columns of cards for the selected game (0 = from the width of the panel).</summary>
+    [ObservableProperty]
+    private int _cardColumns;
+
+    /// <summary>Pictures per row of the "Görseller" card for the selected game.</summary>
+    [ObservableProperty]
+    private int _galleryColumns = 2;
+
+    private bool _loadingOptions;
+
+    partial void OnCardColumnsChanged(int value) => SaveOptionsIfEdited();
+
+    partial void OnGalleryColumnsChanged(int value) => SaveOptionsIfEdited();
+
+    private void SaveOptionsIfEdited()
+    {
+        if (!_loadingOptions)
+        {
+            SaveCards();
         }
     }
 
+    private void LoadOptions(AppSettings settings, bool own)
+    {
+        var options = own && _game is not null && settings.GameCardOptions.TryGetValue(_game.Id, out var gameOptions)
+            ? gameOptions
+            : settings.DefaultCardOptions;
+        _loadingOptions = true;
+        CardColumns = options.Columns;
+        GalleryColumns = Math.Clamp(options.GalleryColumns, 2, 10);
+        _loadingOptions = false;
+    }
+
+    private void LoadCards()
+    {
+        var layout = ResolveLayout(out var own);
+        HasOwnLayout = own;
+        LoadOptions(_settingsService.Load(), own);
+
+        // Same cards in the same order and size: keep them (rebuilding them is not free and would reset scrolling).
+        if (Cards.Count == layout.Count && Cards.Zip(layout).All(x => x.First.Id == x.Second.Id && x.First.Size == x.Second.Size && x.First.IsHidden == x.Second.Hidden && x.First.Span == x.Second.Span && x.First.Rows == x.Second.Rows))
+        {
+            return;
+        }
+
+        Cards.Clear();
+        foreach (var (id, title, size, hidden, span, rows) in layout)
+        {
+            Cards.Add(new DetailCardViewModel(id, title, this, size, hidden, span, rows));
+        }
+    }
+
+    /// <summary>A change made in the panel belongs to the selected game only.</summary>
     private void SaveCards()
     {
+        if (_game is null)
+        {
+            return;
+        }
+
         var settings = _settingsService.Load();
-        settings.DetailCards = Cards.Select(c => new DetailCardSetting { Id = c.Id, Size = c.Size.ToString() }).ToList();
+        settings.GameCardLayouts[_game.Id] = CurrentLayout();
+        settings.GameCardOptions[_game.Id] = new CardViewOptions { Columns = CardColumns, GalleryColumns = GalleryColumns };
         _settingsService.Save(settings);
+        HasOwnLayout = true;
     }
+
+    private List<DetailCardSetting> CurrentLayout() =>
+        Cards.Select(c => new DetailCardSetting { Id = c.Id, Size = c.Size.ToString(), Hidden = c.IsHidden, Span = c.Span, Rows = c.Rows }).ToList();
 
     /// <summary>Moves <paramref name="dragged"/> to <paramref name="target"/>'s position; between two half cards it takes the target's column.</summary>
     public void MoveCard(DetailCardViewModel dragged, DetailCardViewModel target)
@@ -1229,6 +1342,7 @@ public sealed partial class GamePanelViewModel : ObservableObject
         }
 
         card.Size = size;
+        card.Span = 0;
 
         // Re-inserting makes the items control rebuild the container, which re-runs the panel layout.
         Cards.RemoveAt(index);
@@ -1236,15 +1350,136 @@ public sealed partial class GamePanelViewModel : ObservableObject
         SaveCards();
     }
 
+    /// <summary>Edit mode of the cards: grips, size buttons and the show/hide switches appear; hidden cards show dimmed.</summary>
+    [ObservableProperty]
+    private bool _isEditingLayout;
+
+    partial void OnIsEditingLayoutChanged(bool value)
+    {
+        foreach (var card in Cards)
+        {
+            card.RefreshShown();
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleEditLayout() => IsEditingLayout = !IsEditingLayout;
+
+    /// <summary>Shows or hides a card for the selected game only.</summary>
+    public void ToggleCardHidden(DetailCardViewModel card)
+    {
+        card.IsHidden = !card.IsHidden;
+        SaveCards();
+    }
+
+    /// <summary>The number of columns on screen right now, reported by the layout panel.</summary>
+    [ObservableProperty]
+    private int _actualCardColumns = 2;
+
+    partial void OnActualCardColumnsChanged(int value)
+    {
+        foreach (var card in Cards)
+        {
+            card.RefreshSpanText();
+        }
+    }
+
+    /// <summary>Makes a card one column wider or narrower (never beyond the columns on screen); all columns is stored as "full width" so it keeps following the column count.</summary>
+    public void ChangeCardSpan(DetailCardViewModel card, int delta)
+    {
+        var index = Cards.IndexOf(card);
+        if (index < 0)
+        {
+            return;
+        }
+
+        var columns = Math.Max(1, ActualCardColumns);
+        var span = Math.Clamp(card.EffectiveSpan(columns) + delta, 1, columns);
+        if (span >= columns && columns > 1)
+        {
+            card.Size = CardSize.Full;
+            card.Span = 0;
+        }
+        else
+        {
+            if (card.Size == CardSize.Full)
+            {
+                card.Size = CardSize.Auto;
+            }
+
+            card.Span = span;
+        }
+
+        card.RefreshSpanText();
+        Cards.RemoveAt(index);
+        Cards.Insert(index, card);
+        SaveCards();
+    }
+
+    /// <summary>The card's width in columns and height in rows, as set by dragging its corner (applied live; <see cref="SaveCardShape"/> keeps it).</summary>
+    public void SetCardShape(DetailCardViewModel card, int span, int rows)
+    {
+        var columns = Math.Max(1, ActualCardColumns);
+        span = Math.Clamp(span, 1, columns);
+        if (span >= columns && columns > 1)
+        {
+            card.Size = CardSize.Full;
+            card.Span = 0;
+        }
+        else
+        {
+            if (card.Size == CardSize.Full)
+            {
+                card.Size = CardSize.Auto;
+            }
+
+            card.Span = span;
+        }
+
+        card.Rows = Math.Clamp(rows, 1, 40);
+        card.RefreshSpanText();
+    }
+
+    public void SaveCardShape() => SaveCards();
+
+    /// <summary>The card is as tall as its content again.</summary>
+    public void ResetCardHeight(DetailCardViewModel card)
+    {
+        card.Rows = 0;
+        SaveCards();
+    }
+
     public void ToggleCardSize(DetailCardViewModel card) =>
         SetCardSize(card, card.Size == CardSize.Full ? CardSize.Auto : CardSize.Full);
 
+    /// <summary>The selected game goes back to the default layout (its own one is forgotten).</summary>
     public void ResetLayout()
     {
-        var settings = _settingsService.Load();
-        settings.DetailCards = [];
-        _settingsService.Save(settings);
+        if (_game is not null)
+        {
+            var settings = _settingsService.Load();
+            var removed = settings.GameCardLayouts.Remove(_game.Id);
+            removed |= settings.GameCardOptions.Remove(_game.Id);
+            if (removed)
+            {
+                _settingsService.Save(settings);
+            }
+        }
+
         LoadCards();
         Toast(Loc.T("Varsayılan düzen geri yüklendi"));
+    }
+
+    /// <summary>The selected game's layout becomes the default and replaces the own layout of every game.</summary>
+    public void ApplyLayoutToAllGames()
+    {
+        var settings = _settingsService.Load();
+        settings.DetailCards = CurrentLayout();
+        settings.GameCardLayouts.Clear();
+        settings.DefaultCardOptions = new CardViewOptions { Columns = CardColumns, GalleryColumns = GalleryColumns };
+        settings.GameCardOptions.Clear();
+        _settingsService.Save(settings);
+        HasOwnLayout = false;
+        Toast(Loc.T("Düzen tüm oyunlara uygulandı"));
     }
 }

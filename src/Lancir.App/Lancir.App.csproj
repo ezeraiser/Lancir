@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -13,6 +13,11 @@
     <TieredPGO>false</TieredPGO>
     <AutoreleasePoolSupport>false</AutoreleasePoolSupport>
     <ApplicationIcon>Assets/Lancir.ico</ApplicationIcon>
+    <!-- With a Windows 10 target the .NET SDK (and the Windows App SDK scripts that LibVLCSharp pulls in) treat every picture under
+         Assets/ as a loose "Content" file. Lancir embeds its pictures as WPF resources, so that would make WPF look for them on
+         disk and crash at start. Both default-item rules are switched off; resources are listed explicitly below. -->
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
+    <EnableDefaultAssets>false</EnableDefaultAssets>
     <!-- no .pdb files next to the exe in Release builds -->
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
   </PropertyGroup>
@@ -31,12 +36,13 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
     <PackageReference Include="LibVLCSharp" Version="3.9.*" />
+
     <!-- The full libVLC package is 100+ MB; only what is needed to play the store clips is copied (see the VlcFile items below). -->
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.13" />
     <PackageReference Include="WPF-UI" Version="4.3.0" />
-    <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.13" />
     <PackageReference Include="SkiaSharp" Version="2.88.9" />
   </ItemGroup>
 
@@ -45,7 +51,7 @@
   </ItemGroup>
 
 
-  <!-- libVLC, trimmed to playing mp4/webm clips on the CPU: core, file access, mp4 + matroska demuxers,
+  <!-- libVLC, trimmed to playing mp4/webm clips (and Steam's HLS trailers) on the CPU: core, file access, mp4 + matroska demuxers,
        libavcodec, packetizers, chroma conversion and the memory video output. About 30 MB instead of 110 MB. -->
   <PropertyGroup>
     <VlcRoot>$(PkgVideoLAN_LibVLC_Windows)\build\x64</VlcRoot>
@@ -59,6 +65,28 @@
     <VlcFile Include="$(VlcRoot)\plugins\video_chroma\*.dll" Dest="plugins\video_chroma" />
     <VlcFile Include="$(VlcRoot)\plugins\video_output\libvmem_plugin.dll" Dest="plugins\video_output" />
     <VlcFile Include="$(VlcRoot)\plugins\video_filter\*.dll" Dest="plugins\video_filter" />
+    <!-- the in-app video viewer also plays the Steam trailers: HLS streams over https (adaptive demuxer, TCP + TLS, gzip-compressed
+         playlists) with sound (Windows audio output). About 5 MB; the clips and everything else do not depend on these. -->
+    <VlcFile Include="$(VlcRoot)\plugins\access\libhttps_plugin.dll;$(VlcRoot)\plugins\access\libtcp_plugin.dll" Dest="plugins\access" />
+    <VlcFile Include="$(VlcRoot)\plugins\misc\libgnutls_plugin.dll" Dest="plugins\misc" />
+    <VlcFile Include="$(VlcRoot)\plugins\demux\libadaptive_plugin.dll" Dest="plugins\demux" />
+    <VlcFile Include="$(VlcRoot)\plugins\stream_filter\libinflate_plugin.dll" Dest="plugins\stream_filter" />
+    <VlcFile Include="$(VlcRoot)\plugins\audio_output\libmmdevice_plugin.dll" Dest="plugins\audio_output" />
     <None Include="@(VlcFile)" Link="libvlc\%(Dest)\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- LibVLCSharp's Windows 10 build depends on the Windows App SDK (WinUI, WebView2, AI/ML projections: about 40 MB) and SharpDX,
+       but only for its own WinUI/UWP video views. Lancir uses just the core LibVLCSharp.Shared classes, so those packages' files
+       are left out of the published app (excluding the packages themselves does not help: their dependencies still flow in). -->
+  <Target Name="DropUnusedWindowsAppSdkFiles" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <_UnusedPublishFile Include="@(ResolvedFileToPublish)"
+                          Condition="'%(ResolvedFileToPublish.NuGetPackageId)' != '' And ($([System.String]::new('%(ResolvedFileToPublish.NuGetPackageId)').StartsWith('Microsoft.WindowsAppSDK')) Or '%(ResolvedFileToPublish.NuGetPackageId)' == 'Microsoft.Web.WebView2' Or $([System.String]::new('%(ResolvedFileToPublish.NuGetPackageId)').StartsWith('SharpDX')))" />
+      <!-- the same packages' files that carry no package id in the publish list -->
+      <_UnusedPublishFile Include="@(ResolvedFileToPublish)"
+                          Condition="'%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)' == 'Microsoft.Web.WebView2.Core.dll' Or '%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)' == 'Microsoft.Web.WebView2.Core.Projection.dll' Or '%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)' == 'System.Numerics.Tensors.dll'" />
+      <ResolvedFileToPublish Remove="@(_UnusedPublishFile)" />
+    </ItemGroup>
+  </Target>
+
 </Project>

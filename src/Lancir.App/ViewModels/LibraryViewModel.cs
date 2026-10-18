@@ -48,6 +48,9 @@ public sealed partial class LibraryViewModel : ViewModelBase
 
         Games.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasUnmatchedGames));
 
+        // Covers, backgrounds and store pictures were replaced behind the view's back (restoring originals): show the new files.
+        MediaEvents.Changed += () => System.Windows.Application.Current.Dispatcher.BeginInvoke(async () => await LoadAsync());
+
         // LibraryViewModel lives for the whole app lifetime (held by MainViewModel), so no unsubscribe is needed.
         playtimeTracker.PlaytimeChanged += (gameId, seconds) =>
             System.Windows.Application.Current.Dispatcher.BeginInvoke(() =>
@@ -237,6 +240,19 @@ public sealed partial class LibraryViewModel : ViewModelBase
     [RelayCommand]
     private void SetListView(string? isList) => IsListView = bool.TryParse(isList, out var v) && v;
 
+    /// <summary>Switches between the tile view and the list view (the nav strip's view button).</summary>
+    [RelayCommand]
+    private void ToggleListView() => IsListView = !IsListView;
+
+    [RelayCommand]
+    private void SelectSort(SortOption? option)
+    {
+        if (option is not null)
+        {
+            SelectedSortOption = option;
+        }
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedGame))]
     private LibraryGameViewModel? _selectedGame;
@@ -267,7 +283,10 @@ public sealed partial class LibraryViewModel : ViewModelBase
                 g.IsRunning = _playtimeTracker.IsRunning(g.Id);
             }
 
-            SelectGame(toSelect);
+            EnsureScopes();
+            GamesView.Refresh();
+            UpdateHasVisibleGames();
+            SelectGame(toSelect is not null && !Shown(toSelect) ? Games.FirstOrDefault(Shown) : toSelect);
             _ = RunStartupSteamSyncAsync();
         }
         catch (Exception ex)

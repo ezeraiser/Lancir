@@ -15,6 +15,30 @@ public partial class LibraryView : UserControl
     }
 
     /// <summary>Opens the add menu (Steam game / by hand) under the button.</summary>
+    /// <summary>Fills the game menu's "Özel kütüphaneye ekle" list with the user's libraries, ticking the ones the game is in.</summary>
+    private void OnLibrariesSubmenuOpened(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.MenuItem { DataContext: LibraryGameViewModel game } parent || DataContext is not LibraryViewModel library)
+        {
+            return;
+        }
+
+        parent.Items.Clear();
+        var custom = library.Scopes.Where(s => s.IsCustom).ToList();
+        if (custom.Count == 0)
+        {
+            parent.Items.Add(new System.Windows.Controls.MenuItem { Header = Lancir.App.Services.Loc.T("Henüz özel kütüphane yok (soldaki + menüsünden oluşturun)"), IsEnabled = false });
+            return;
+        }
+
+        foreach (var scope in custom)
+        {
+            var item = new System.Windows.Controls.MenuItem { Header = scope.Title, IsCheckable = true, IsChecked = library.IsInLibrary(scope, game) };
+            item.Click += (_, _) => library.ToggleGameInLibrary(scope, game);
+            parent.Items.Add(item);
+        }
+    }
+
     private void OnAddGameClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { ContextMenu: { } menu } button)

@@ -14,9 +14,16 @@ public sealed class FilePathToImageConverter : IValueConverter
             return null;
         }
 
+        if (path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+        {
+            int.TryParse(parameter as string, out var webpWidth);
+            return Lancir.App.Services.ImageLoader.DecodeFileNow(path, webpWidth);
+        }
+
         var image = new BitmapImage();
         image.BeginInit();
         image.CacheOption = BitmapCacheOption.OnLoad;
+        image.CreateOptions = BitmapCreateOptions.IgnoreImageCache; // a file replaced under the same path must not return the old picture
         image.UriSource = new Uri(path, UriKind.Absolute);
 
         // ConverterParameter: the width the picture is shown at; decoding at that size keeps big art from filling memory.

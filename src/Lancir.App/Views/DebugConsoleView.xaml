@@ -19,7 +19,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="{loc:Tr 'Debug Konsol'}" FontSize="26" FontWeight="SemiBold"
+            <TextBlock x:Name="TitleText" Grid.Column="0" Text="{loc:Tr 'Debug Konsol'}" FontSize="26" FontWeight="SemiBold"
                        VerticalAlignment="Center" />
             <ui:Button Grid.Column="1" Content="{loc:Tr 'Temizle'}" Icon="{ui:SymbolIcon Broom24}"
                        Appearance="Secondary" VerticalAlignment="Center"

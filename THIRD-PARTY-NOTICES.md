@@ -13,8 +13,8 @@ version used here.
 | [SkiaSharp](https://github.com/mono/SkiaSharp) (and its Windows native library) | 2.88.9 | MIT | reading and writing the WebP thumbnail cache |
 | [WPF-UI](https://github.com/lepoco/wpfui) | 4.3.0 | MIT | the app's Fluent look and icons |
 | [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | 8.3.2 | MIT | MVVM helpers |
-| Entity Framework Core, Microsoft.Data.Sqlite, Microsoft.Extensions.* (Microsoft) | 8.0.x | MIT | the library database and app plumbing |
-| [System.Drawing.Common](https://github.com/dotnet/runtime) | 8.0.10 | MIT | reading icons from game executables |
+| Entity Framework Core, Microsoft.Data.Sqlite, Microsoft.Extensions.* (Microsoft) | 10.0.x | MIT | the library database and app plumbing |
+| [System.Drawing.Common](https://github.com/dotnet/runtime) | 10.0.x | MIT | reading icons from game executables |
 | [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw) | 2.1.6 | Apache-2.0 | SQLite native bindings |
 | [SQLite](https://www.sqlite.org/copyright.html) | - | Public domain | the database engine (inside the SQLitePCLRaw native library) |
 

@@ -17,7 +17,10 @@ namespace Lancir.App.Services;
 public static class ImageLoader
 {
     /// <summary>Upper bound for the decoded pixels kept for reuse (pictures currently on screen are held by their controls anyway).</summary>
-    public const long BudgetBytes = 32L * 1024 * 1024;
+    public const long MaxBudgetBytes = 256L * 1024 * 1024;
+
+    /// <summary>Set from the memory limit in Settings (see <see cref="MemoryTrimmer"/>): at most 256 MB, and never more than 60% of the limit.</summary>
+    public static long BudgetBytes { get; set; } = MaxBudgetBytes;
 
     private const int MaxConcurrentDecodes = 2;
 
@@ -27,6 +30,8 @@ public static class ImageLoader
     private static readonly LinkedList<Entry> Recent = new(); // first = most recently used
     private static readonly Dictionary<string, string> LatestKey = [];
     private static readonly Dictionary<string, Task<BitmapSource?>> InFlight = [];
+    // A game with 190 achievements asks for 190 icons at once; the CDN drops many of such a burst, and a dropped one stayed blank.
+    private static readonly SemaphoreSlim DownloadGate = new(6);
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(20) };
     private static long _bytes;
 
@@ -128,6 +133,12 @@ public static class ImageLoader
         });
     }
 
+    /// <summary>
+    /// Decodes a local picture right now, on the calling thread (for the few places that bind through a converter, such as
+    /// dialogs). Handles WebP as well as the formats WPF reads itself. Null when it cannot be shown.
+    /// </summary>
+    public static BitmapSource? DecodeFileNow(string path, int width) => File.Exists(path) ? Decode(path, null, width, out _) : null;
+
     /// <summary>Empties the cache; pictures that are on screen stay alive through their controls.</summary>
     public static void Clear()
     {
@@ -216,7 +227,25 @@ public static class ImageLoader
             }
         }
 
-        var bytes = await Http.GetByteArrayAsync(url);
+        byte[] bytes;
+        await DownloadGate.WaitAsync();
+        try
+        {
+            try
+            {
+                bytes = await Http.GetByteArrayAsync(url);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                await Task.Delay(700);
+                bytes = await Http.GetByteArrayAsync(url); // one more try before giving up
+            }
+        }
+        finally
+        {
+            DownloadGate.Release();
+        }
+
         if (file is null)
         {
             return (null, bytes);
@@ -239,14 +268,26 @@ public static class ImageLoader
     private static BitmapSource? Decode(string? path, byte[]? bytes, int width, out int originalWidth)
     {
         originalWidth = 0;
+        if (path is not null && bytes is null && path.EndsWith(WebpThumbnails.Extension, StringComparison.OrdinalIgnoreCase))
+        {
+            // WPF cannot read WebP: pictures converted to WebP (screenshots, covers, backgrounds) are decoded through Skia.
+            return WebpThumbnails.TryLoad(path, width, out originalWidth);
+        }
+
         try
         {
             if (bytes is null && width > 0)
             {
                 // Header only: a picture smaller than the target must not be enlarged (that would just waste memory).
-                var decoder = BitmapDecoder.Create(new Uri(path!, UriKind.Absolute),
-                    BitmapCreateOptions.DelayCreation | BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
-                originalWidth = decoder.Frames[0].PixelWidth;
+                // Read through a stream that is closed right after: a decoder made from the path keeps the file open until the
+                // garbage collector gets to it, and an open file cannot be replaced or deleted (a re-downloaded cover, the optimizer).
+                using (var header = File.OpenRead(path!))
+                {
+                    var decoder = BitmapDecoder.Create(header,
+                        BitmapCreateOptions.DelayCreation | BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
+                    originalWidth = decoder.Frames[0].PixelWidth;
+                }
+
                 if (originalWidth <= width)
                 {
                     width = 0;
@@ -256,6 +297,10 @@ public static class ImageLoader
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
+
+            // WPF keeps its own cache of decoded pictures keyed by path: a cover re-downloaded under the same path would come back as
+            // the OLD picture. This loader has its own cache that checks the file's modification time, so skip WPF's.
+            image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
             if (bytes is not null)
             {
                 image.StreamSource = new MemoryStream(bytes, writable: false);

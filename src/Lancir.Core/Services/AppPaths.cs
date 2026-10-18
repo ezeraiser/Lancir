@@ -2,8 +2,14 @@ namespace Lancir.Core.Services;
 
 public static class AppPaths
 {
-    public static string AppDataFolder { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Lancir");
+    /// <summary>
+    /// Where the library, settings and caches live: %AppData%\Lancir, unless the LANCIR_DATA_DIR environment variable names
+    /// another folder (for running a copy of the data without touching the real one, or a portable setup).
+    /// </summary>
+    public static string AppDataFolder { get; } =
+        Environment.GetEnvironmentVariable("LANCIR_DATA_DIR") is { Length: > 0 } custom
+            ? Path.GetFullPath(custom)
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Lancir");
 
     public static string DatabasePath { get; } = Path.Combine(AppDataFolder, "library.db");
 
@@ -20,6 +26,9 @@ public static class AppPaths
 
     /// <summary>Downscaled copies of large pictures (made in the background), so showing them again decodes a small file.</summary>
     public static string ThumbnailFolder { get; } = Path.Combine(AppDataFolder, "cache", "thumbs");
+
+    /// <summary>Where the full-quality originals go when pictures are compressed but originals are to be kept.</summary>
+    public static string OriginalImagesFolder { get; } = Path.Combine(AppDataFolder, "cache", "originals");
 
     public static string SteamMediaFolder { get; } = Path.Combine(AppDataFolder, "cache", "steam");
 

@@ -1,4 +1,4 @@
-﻿<Application x:Class="Lancir.App.App"
+<Application x:Class="Lancir.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Lancir.App"
@@ -14,6 +14,7 @@
 
             <conv:EnumEqualsToVisibilityConverter x:Key="EnumEqualsToVisibilityConverter" />
             <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+            <conv:AspectHeightConverter x:Key="AspectHeightConverter" />
             <conv:FilePathToImageConverter x:Key="FilePathToImageConverter" />
             <conv:UrlToImageConverter x:Key="UrlToImageConverter" />
             <conv:BoolToGridLengthConverter x:Key="BoolToGridLengthConverter" />
@@ -22,6 +23,11 @@
             <Style x:Key="GameNameCardStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="{Binding CardFontSize, Source={x:Static svc:GameNameAppearance.Instance}}" />
                 <Setter Property="FontWeight" Value="{Binding CardFontWeight, Source={x:Static svc:GameNameAppearance.Instance}}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
+                <Setter Property="LineHeight" Value="{Binding CardLineHeight, Source={x:Static svc:GameNameAppearance.Instance}}" />
+                <Setter Property="MaxHeight" Value="{Binding CardTwoLineHeight, Source={x:Static svc:GameNameAppearance.Instance}}" />
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding HasCustomFont, Source={x:Static svc:GameNameAppearance.Instance}}" Value="True">
                         <Setter Property="FontFamily" Value="{Binding CustomFontFamily, Source={x:Static svc:GameNameAppearance.Instance}}" />
@@ -32,6 +38,11 @@
             <Style x:Key="GameNameListStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="{Binding ListFontSize, Source={x:Static svc:GameNameAppearance.Instance}}" />
                 <Setter Property="FontWeight" Value="{Binding ListFontWeight, Source={x:Static svc:GameNameAppearance.Instance}}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
+                <Setter Property="LineHeight" Value="{Binding ListLineHeight, Source={x:Static svc:GameNameAppearance.Instance}}" />
+                <Setter Property="MaxHeight" Value="{Binding ListTwoLineHeight, Source={x:Static svc:GameNameAppearance.Instance}}" />
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding HasCustomFont, Source={x:Static svc:GameNameAppearance.Instance}}" Value="True">
                         <Setter Property="FontFamily" Value="{Binding CustomFontFamily, Source={x:Static svc:GameNameAppearance.Instance}}" />

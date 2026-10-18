@@ -60,7 +60,11 @@ public sealed class MemoryTrimmer
         window.Activated += (_, _) => _backgroundTimer.Stop(); // back in use: do not trim a moment after the user returned
 
         // The first check comes a little after startup, when loading is done.
-        window.Loaded += (_, _) => _checkTimer.Start();
+        window.Loaded += (_, _) =>
+        {
+            ApplyCacheBudget(_settings.Load());
+            _checkTimer.Start();
+        };
     }
 
     /// <summary>The working set of this process (what Task Manager's Memory column is close to), in bytes.</summary>
@@ -69,6 +73,7 @@ public sealed class MemoryTrimmer
     private void CheckThreshold()
     {
         var settings = _settings.Load();
+        ApplyCacheBudget(settings);
         if (!settings.MemoryTrimEnabled || _trimming || DateTime.UtcNow < _nextAllowedUtc)
         {
             return;
@@ -133,6 +138,12 @@ public sealed class MemoryTrimmer
             _trimming = false;
         }
     }
+
+    /// <summary>The picture cache follows the memory limit: 256 MB at most, but never more than 60% of the limit (so it cannot trigger the clean-up by itself).</summary>
+    private static void ApplyCacheBudget(AppSettings settings) =>
+        ImageLoader.BudgetBytes = settings.MemoryTrimEnabled
+            ? Math.Min(ImageLoader.MaxBudgetBytes, LimitBytes(settings) * 6 / 10)
+            : ImageLoader.MaxBudgetBytes;
 
     private static long LimitBytes(AppSettings settings) => Math.Max(50, settings.MemoryTrimThresholdMb) * 1024L * 1024;
 

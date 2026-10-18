@@ -27,6 +27,14 @@ public static class AsyncImage
     public static readonly DependencyProperty CacheOnDiskProperty =
         DependencyProperty.RegisterAttached("CacheOnDisk", typeof(bool), typeof(AsyncImage), new PropertyMetadata(false, OnChanged));
 
+    /// <summary>
+    /// Changes whenever the picture file itself was replaced (bind it to the file's modification time). A re-downloaded cover keeps
+    /// its path, so without this the binding would produce the same text as before, WPF would see no change, and the old picture
+    /// would stay on screen.
+    /// </summary>
+    public static readonly DependencyProperty StampProperty =
+        DependencyProperty.RegisterAttached("Stamp", typeof(long), typeof(AsyncImage), new PropertyMetadata(0L, OnChanged));
+
     // Counts requests per element so a slow, outdated load can never overwrite a newer picture.
     private static readonly DependencyProperty VersionProperty =
         DependencyProperty.RegisterAttached("Version", typeof(int), typeof(AsyncImage), new PropertyMetadata(0));
@@ -38,6 +46,10 @@ public static class AsyncImage
     public static int GetDecodeWidth(DependencyObject element) => (int)element.GetValue(DecodeWidthProperty);
 
     public static void SetDecodeWidth(DependencyObject element, int value) => element.SetValue(DecodeWidthProperty, value);
+
+    public static long GetStamp(DependencyObject element) => (long)element.GetValue(StampProperty);
+
+    public static void SetStamp(DependencyObject element, long value) => element.SetValue(StampProperty, value);
 
     public static bool GetCacheOnDisk(DependencyObject element) => (bool)element.GetValue(CacheOnDiskProperty);
 
@@ -68,7 +80,10 @@ public static class AsyncImage
         }
 
         var width = GetDecodeWidth(element);
-        var cached = ImageLoader.TryGetCached(source, width);
+
+        // The file was replaced under the same path: what the cache holds for that path is the old picture, so do not show it.
+        var replaced = e.Property == StampProperty && e.OldValue is long previous && previous != 0 && previous != (long)e.NewValue;
+        var cached = replaced ? null : ImageLoader.TryGetCached(source, width);
         if (cached is not null)
         {
             element.SetValue(target, cached);

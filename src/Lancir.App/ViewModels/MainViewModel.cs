@@ -8,9 +8,7 @@ namespace Lancir.App.ViewModels;
 public enum AppTab
 {
     Library,
-    ScanReview,
     Settings,
-    DebugConsole,
 }
 
 public sealed partial class MainViewModel : ObservableObject
@@ -38,7 +36,23 @@ public sealed partial class MainViewModel : ObservableObject
         {
             if (e.PropertyName == nameof(LibraryViewModel.IsListView))
             {
+                OnPropertyChanged(nameof(LibraryMinWidth));
                 ApplyLayout();
+            }
+            else if (e.PropertyName == nameof(LibraryViewModel.HasSelectedGame))
+            {
+                OnPropertyChanged(nameof(ShowDetailsPane));
+            }
+        };
+
+        // The folder scan lives in Settings now: it starts when its section is opened.
+        SettingsViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SettingsViewModel.SelectedSectionIndex)
+                && SettingsViewModel.SelectedSectionIndex == SettingsViewModel.ScanSectionIndex
+                && SelectedTab == AppTab.Settings)
+            {
+                _ = ScanReviewViewModel.ScanCommand.ExecuteAsync(null);
             }
         };
         LibraryViewModel.LayoutResetRequested += ResetLayout;
@@ -62,7 +76,11 @@ public sealed partial class MainViewModel : ObservableObject
     public DebugConsoleViewModel DebugConsoleViewModel { get; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowDetailsPane))]
     private AppTab _selectedTab = AppTab.Library;
+
+    /// <summary>The game side panel only belongs to the library: Settings (with everything in it) use the whole width.</summary>
+    public bool ShowDetailsPane => SelectedTab == AppTab.Library && LibraryViewModel.HasSelectedGame;
 
     [ObservableProperty]
     private bool _isNavCollapsed;
@@ -77,11 +95,15 @@ public sealed partial class MainViewModel : ObservableObject
     private const double DefaultGridFraction = 0.30;
     private const double DefaultListFraction = 0.60;
     private const double MinDetailsWidth = 320;
-    private const double MinLibraryWidth = 360;
+    private const double MinLibraryWidthGrid = 360;
+    private const double MinLibraryWidthList = 200;
     private const double SplitterWidth = 6;
 
     /// <summary>Width shared by the library column, splitter and details pane (window minus nav pane), set by the window.</summary>
     private double _availableWidth;
+
+    /// <summary>The narrowest the library column may get: a list only needs names, tiles need room for a tile.</summary>
+    public double LibraryMinWidth => LibraryViewModel.IsListView ? MinLibraryWidthList : MinLibraryWidthGrid;
 
     public void UpdateAvailableWidth(double width)
     {
@@ -101,7 +123,7 @@ public sealed partial class MainViewModel : ObservableObject
                        ?? (listView ? DefaultListFraction : DefaultGridFraction);
 
         var available = _availableWidth > 0 ? _availableWidth : 900;
-        var maxWidth = Math.Max(MinDetailsWidth, available - SplitterWidth - MinLibraryWidth);
+        var maxWidth = Math.Max(MinDetailsWidth, available - SplitterWidth - LibraryMinWidth);
         try
         {
             DetailsPaneWidth = new GridLength(Math.Clamp(fraction * available, MinDetailsWidth, maxWidth));
@@ -163,6 +185,24 @@ public sealed partial class MainViewModel : ObservableObject
         _settingsService.Save(settings);
     }
 
+    /// <summary>Opens the library page on one of the strip's lists (all games, a status, a library of the user's own).</summary>
+    [RelayCommand]
+    private async Task SelectScopeAsync(LibraryScopeItem? scope)
+    {
+        if (scope is null)
+        {
+            return;
+        }
+
+        SelectedTab = AppTab.Library;
+        if (LibraryViewModel.Games.Count == 0)
+        {
+            await LibraryViewModel.LoadCommand.ExecuteAsync(null);
+        }
+
+        LibraryViewModel.SelectScope(scope);
+    }
+
     [RelayCommand]
     private async Task GoToLibraryAsync()
     {
@@ -171,22 +211,10 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task GoToScanReviewAsync()
-    {
-        SelectedTab = AppTab.ScanReview;
-        await ScanReviewViewModel.ScanCommand.ExecuteAsync(null);
-    }
-
-    [RelayCommand]
     private async Task GoToSettingsAsync()
     {
         SelectedTab = AppTab.Settings;
+        SettingsViewModel.Backup.Refresh();
         await SettingsViewModel.LoadCommand.ExecuteAsync(null);
-    }
-
-    [RelayCommand]
-    private void GoToDebugConsole()
-    {
-        SelectedTab = AppTab.DebugConsole;
     }
 }

@@ -75,9 +75,16 @@ public static class WebpThumbnails
         }
     }
 
-    /// <summary>Decodes a WebP thumbnail into a frozen bitmap, or null if it is missing, damaged or WebP is unavailable.</summary>
-    public static BitmapSource? TryLoad(string path)
+    /// <summary>Decodes a WebP file into a frozen bitmap, or null if it is missing, damaged or WebP is unavailable.</summary>
+    public static BitmapSource? TryLoad(string path) => TryLoad(path, 0, out _);
+
+    /// <summary>
+    /// Decodes a WebP file, scaled down to at most <paramref name="maxWidth"/> pixels wide when that is above zero (never
+    /// enlarged). <paramref name="originalWidth"/> is the width stored in the file.
+    /// </summary>
+    public static BitmapSource? TryLoad(string path, int maxWidth, out int originalWidth)
     {
+        originalWidth = 0;
         if (_unavailable)
         {
             return null;
@@ -97,17 +104,27 @@ public static class WebpThumbnails
                 return null;
             }
 
+            originalWidth = codec.Info.Width;
             var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
-            using var bitmap = new SKBitmap(info);
-            if (codec.GetPixels(info, bitmap.GetPixels()) != SKCodecResult.Success)
+            using var full = new SKBitmap(info);
+            if (codec.GetPixels(info, full.GetPixels()) != SKCodecResult.Success)
             {
                 return null;
             }
 
-            // BitmapSource.Create copies the pixels, so the Skia buffer can be released right after.
+            // A big file is shown smaller than it is stored: scale it down here so only the small version is kept in memory.
+            using var scaled = maxWidth > 0 && info.Width > maxWidth
+                ? full.Resize(
+                    new SKImageInfo(maxWidth, Math.Max(1, (int)Math.Round(info.Height * (double)maxWidth / info.Width)),
+                        SKColorType.Bgra8888, SKAlphaType.Premul),
+                    SKFilterQuality.High)
+                : null;
+            var bitmap = scaled ?? full;
+
+            // BitmapSource.Create copies the pixels, so the Skia buffers can be released right after.
             var image = BitmapSource.Create(
-                info.Width, info.Height, 96, 96, PixelFormats.Pbgra32, null,
-                bitmap.GetPixels(), info.Height * info.RowBytes, info.RowBytes);
+                bitmap.Width, bitmap.Height, 96, 96, PixelFormats.Pbgra32, null,
+                bitmap.GetPixels(), bitmap.Height * bitmap.RowBytes, bitmap.RowBytes);
             image.Freeze();
             return image;
         }

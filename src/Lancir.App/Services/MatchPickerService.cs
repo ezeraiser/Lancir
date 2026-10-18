@@ -30,8 +30,8 @@ public sealed class MatchPickerService : IMatchPickerService
     {
         var viewModel = new MatchCompareViewModel(
             currentGame.DisplayName,
-            currentGame.CoverImagePath,
-            currentGame.BackgroundImagePath,
+            MediaPaths.Resolve(currentGame.CoverImagePath),
+            MediaPaths.Resolve(currentGame.BackgroundImagePath),
             currentGame.Description,
             currentGame.Genres,
             currentGame.CommunityRating,
