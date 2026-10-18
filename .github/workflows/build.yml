@@ -1,13 +1,11 @@
 name: Build
 
-# Builds and tests Lancir on every push to main and on pull requests, and produces the release .zip.
+# Builds and tests Lancir and produces the release .zip. It does NOT run on ordinary pushes.
 #  - Run it by hand any time: Actions tab -> Build -> Run workflow. The zip is attached to the run (Artifacts).
 #  - Push a tag such as v1.0.0 to also publish a GitHub Release with the zip attached.
 on:
   push:
-    branches: [main]
     tags: ['v*']
-  pull_request:
   workflow_dispatch:
 
 permissions:
