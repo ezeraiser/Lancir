@@ -1,0 +1,371 @@
+<UserControl x:Class="Lancir.App.Views.LibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:Lancir.App.Markup"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:Lancir.App.ViewModels"
+             xmlns:ctrl="clr-namespace:Lancir.App.Controls"
+             xmlns:svc="clr-namespace:Lancir.App.Services"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:LibraryViewModel}">
+    <UserControl.Resources>
+        <Style x:Key="GameCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style x:Key="GameCardSelectedStyle" TargetType="Border" BasedOn="{StaticResource GameCardStyle}">
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+
+        <Style x:Key="PlayOverlayButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#80000000" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="26">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <ContextMenu x:Key="GameContextMenu" x:Shared="False">
+            <MenuItem Header="{loc:Tr 'Detaylar / Düzenle'}"
+                      Command="{Binding PlacementTarget.Tag.OpenDetailsCommand,
+                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Edit24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Üst Veri Getir'}" IsEnabled="{Binding CanMatch}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="CloudArrowDown24" />
+                </MenuItem.Icon>
+                <MenuItem Header="{loc:Tr 'Steam\'den'}"
+                          Command="{Binding PlacementTarget.Tag.MatchWithSteamCommand,
+                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                          CommandParameter="{Binding}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="Games24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="{loc:Tr 'SteamGridDB\'den'}"
+                          Command="{Binding PlacementTarget.Tag.MatchWithSteamGridDbCommand,
+                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                          CommandParameter="{Binding}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="Image24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="{loc:Tr 'IGDB\'den'}"
+                          Command="{Binding PlacementTarget.Tag.MatchWithIgdbCommand,
+                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                          CommandParameter="{Binding}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="Database24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="{loc:Tr 'Kaldır'}"
+                      Command="{Binding PlacementTarget.Tag.RemoveGameCommand,
+                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Delete24" />
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,4,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="{loc:Tr 'Kütüphane'}" FontSize="26" FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <ComboBox ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSortOption}"
+                      DisplayMemberPath="Label" MinWidth="150" Margin="0,0,12,0" ToolTip="{loc:Tr 'Sıralama'}" />
+            <ui:Button Icon="{ui:SymbolIcon Grid24}" ToolTip="{loc:Tr 'Kutucuk görünümü'}" Margin="0,0,4,0"
+                       Command="{Binding SetListViewCommand}" CommandParameter="False">
+                <ui:Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="{loc:Tr 'Varsayılan düzene dön'}"
+                                  Command="{Binding PlacementTarget.DataContext.ResetLayoutCommand,
+                                            RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="False">
+                            <MenuItem.Icon>
+                                <ui:SymbolIcon Symbol="ArrowReset24" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </ContextMenu>
+                </ui:Button.ContextMenu>
+                <ui:Button.Style>
+                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                        <Setter Property="Appearance" Value="Secondary" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsListView}" Value="False">
+                                <Setter Property="Appearance" Value="Primary" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ui:Button.Style>
+            </ui:Button>
+            <ui:Button Icon="{ui:SymbolIcon TextBulletListLtr24}" ToolTip="{loc:Tr 'Liste görünümü'}" Margin="0,0,12,0"
+                       Command="{Binding SetListViewCommand}" CommandParameter="True">
+                <ui:Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="{loc:Tr 'Varsayılan düzene dön'}"
+                                  Command="{Binding PlacementTarget.DataContext.ResetLayoutCommand,
+                                            RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="True">
+                            <MenuItem.Icon>
+                                <ui:SymbolIcon Symbol="ArrowReset24" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </ContextMenu>
+                </ui:Button.ContextMenu>
+                <ui:Button.Style>
+                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                        <Setter Property="Appearance" Value="Secondary" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsListView}" Value="True">
+                                <Setter Property="Appearance" Value="Primary" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ui:Button.Style>
+            </ui:Button>
+            <ui:Button Icon="{ui:SymbolIcon Add24}" ToolTip="{loc:Tr 'Ekle, içe aktar, eşleştir'}"
+                       Appearance="Primary" VerticalAlignment="Center"
+                       Click="OnAddGameClick">
+                <ui:Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="{loc:Tr 'Steam oyunu ekle'}" Command="{Binding AddSteamGameCommand}">
+                            <MenuItem.Icon>
+                                <ui:SymbolIcon Symbol="Games24" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="{loc:Tr 'Elle ekle (exe)'}" Command="{Binding AddGameCommand}">
+                            <MenuItem.Icon>
+                                <ui:SymbolIcon Symbol="Document24" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <Separator />
+                        <MenuItem Header="{loc:Tr 'Steam\'den içe aktar'}" Command="{Binding ImportFromSteamCommand}">
+                            <MenuItem.Icon>
+                                <ui:SymbolIcon Symbol="ArrowDownload24" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="{loc:Tr 'Eşleşmeyen oyunları SteamGridDB / IGDB ile eşleştir'}" Command="{Binding MatchAllCommand}">
+                            <MenuItem.Icon>
+                                <ui:SymbolIcon Symbol="CloudSync24" />
+                            </MenuItem.Icon>
+                            <MenuItem.Visibility>
+                                <Binding Path="HasUnmatchedGames" Converter="{StaticResource NullToVisibilityConverter}" />
+                            </MenuItem.Visibility>
+                        </MenuItem>
+                    </ContextMenu>
+                </ui:Button.ContextMenu>
+            </ui:Button>
+            </StackPanel>
+        </Grid>
+
+        <ui:InfoBar Grid.Row="1" Severity="Error" Title="{loc:Tr 'Hata'}" IsOpen="{Binding IsErrorOpen, Mode=TwoWay}"
+                    Message="{Binding ErrorMessage}" Margin="0,0,0,12">
+            <ui:InfoBar.Visibility>
+                <Binding Path="ErrorMessage" Converter="{StaticResource NullToVisibilityConverter}" />
+            </ui:InfoBar.Visibility>
+        </ui:InfoBar>
+
+        <Grid Grid.Row="2">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel.Visibility>
+                    <Binding Path="Games.Count" Converter="{StaticResource NullToVisibilityConverter}"
+                             ConverterParameter="Invert" />
+                </StackPanel.Visibility>
+                <ui:SymbolIcon Symbol="XboxController24" FontSize="40"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               HorizontalAlignment="Center" />
+                <TextBlock Text="{loc:Tr 'Henüz kütüphanenizde oyun yok'}" FontSize="15" Margin="0,12,0,4"
+                           HorizontalAlignment="Center" />
+                <TextBlock Text="{loc:Tr '&quot;Klasör Tara&quot; sekmesinden başlayın'}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ScrollViewer.Visibility>
+                    <Binding Path="IsListView" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                </ScrollViewer.Visibility>
+                <ItemsControl ItemsSource="{Binding Games}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:LibraryGameViewModel}">
+                            <Border Width="176" Margin="0,0,16,16"
+                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    AllowDrop="True" PreviewMouseLeftButtonDown="OnItemMouseDown" MouseMove="OnItemMouseMove"
+                                    DragEnter="OnItemDragOver" DragOver="OnItemDragOver" DragLeave="OnItemDragLeave" Drop="OnItemDrop"
+                                    MouseLeftButtonUp="OnCardClick" Cursor="Hand"
+                                    ContextMenu="{StaticResource GameContextMenu}">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource GameCardStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                <Setter Property="BorderThickness" Value="2" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsDropTarget}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                                <Setter Property="BorderThickness" Value="2" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <StackPanel>
+                                    <Grid x:Name="CoverGrid" Height="230">
+                                        <Border CornerRadius="12,12,0,0" ClipToBounds="True"
+                                                Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                            <Grid>
+                                                <Grid.OpacityMask>
+                                                    <VisualBrush>
+                                                        <VisualBrush.Visual>
+                                                            <Border Width="174" Height="230" CornerRadius="11,11,0,0" Background="White" />
+                                                        </VisualBrush.Visual>
+                                                    </VisualBrush>
+                                                </Grid.OpacityMask>
+                                                <ui:SymbolIcon Symbol="ImageProhibited24" FontSize="28"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Image ctrl:AsyncImage.DecodeWidth="360" ctrl:AsyncImage.Source="{Binding CoverImagePath}"
+                                                       Stretch="UniformToFill" />
+                                            </Grid>
+                                        </Border>
+                                        <Button x:Name="PlayOverlayButton" Style="{StaticResource PlayOverlayButtonStyle}"
+                                                Width="52" Height="52" HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Visibility="{Binding ShowGridPlayButton, Source={x:Static svc:UiPreferences.Instance},
+                                                             Converter={StaticResource NullToVisibilityConverter}}"
+                                                Command="{Binding DataContext.LaunchGameCommand,
+                                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}">
+                                            <ui:SymbolIcon Symbol="Play24" Filled="True" FontSize="22" />
+                                        </Button>
+                                    </Grid>
+
+                                    <StackPanel Margin="10,10,10,12">
+                                        <TextBlock Text="{Binding DisplayName}" Margin="0,0,0,4"
+                                                   Style="{StaticResource GameNameCardStyle}"
+                                                   TextTrimming="CharacterEllipsis" />
+
+                                        <TextBlock Text="{Binding PlaytimeText}" FontSize="8"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <Trigger SourceName="CoverGrid" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="PlayOverlayButton" Property="Opacity" Value="1" />
+                                </Trigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ScrollViewer.Visibility>
+                    <Binding Path="IsListView" Converter="{StaticResource NullToVisibilityConverter}" />
+                </ScrollViewer.Visibility>
+                <ItemsControl ItemsSource="{Binding Games}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:LibraryGameViewModel}">
+                            <Border Margin="0,0,16,8" Height="96" Padding="8"
+                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    AllowDrop="True" PreviewMouseLeftButtonDown="OnItemMouseDown" MouseMove="OnItemMouseMove"
+                                    DragEnter="OnItemDragOver" DragOver="OnItemDragOver" DragLeave="OnItemDragLeave" Drop="OnItemDrop"
+                                    MouseLeftButtonUp="OnCardClick" Cursor="Hand"
+                                    ContextMenu="{StaticResource GameContextMenu}">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource GameCardStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                <Setter Property="BorderThickness" Value="2" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsDropTarget}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                                <Setter Property="BorderThickness" Value="2" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid x:Name="ListCoverGrid" Grid.Column="0" Width="64" Margin="0,0,14,0">
+                                        <Border CornerRadius="6" ClipToBounds="True"
+                                                Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                            <Image ctrl:AsyncImage.DecodeWidth="140" ctrl:AsyncImage.Source="{Binding CoverImagePath}"
+                                                   Stretch="UniformToFill" />
+                                        </Border>
+                                        <Button x:Name="ListPlayButton" Style="{StaticResource PlayOverlayButtonStyle}"
+                                                Width="34" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                Command="{Binding DataContext.LaunchGameCommand,
+                                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}">
+                                            <ui:SymbolIcon Symbol="Play24" Filled="True" FontSize="14" />
+                                        </Button>
+                                    </Grid>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource GameNameListStyle}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding PlaytimeText}" FontSize="8" Margin="0,2,0,0"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding Genres}" FontSize="11"
+                                               VerticalAlignment="Center" Margin="12,0,8,0" MaxWidth="260"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <Trigger SourceName="ListCoverGrid" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ListPlayButton" Property="Opacity" Value="1" />
+                                </Trigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

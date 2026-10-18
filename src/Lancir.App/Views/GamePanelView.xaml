@@ -1,0 +1,890 @@
+<UserControl x:Class="Lancir.App.Views.GamePanelView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:Lancir.App.Markup"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:Lancir.App.ViewModels"
+             xmlns:ctrl="clr-namespace:Lancir.App.Controls"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:GamePanelViewModel}">
+    <UserControl.Resources>
+        <ctrl:CardContentTemplateSelector x:Key="CardContentSelector" />
+
+        <Style x:Key="IconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Margin" Value="2,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="#47000000" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#33FFFFFF" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- An invisible button that covers the whole element it sits on (the default button would only be as large as its content). -->
+        <Style x:Key="OverlayHitButtonStyle" TargetType="Button">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Hit" Background="Transparent" CornerRadius="8" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Hit" Property="Background" Value="#22FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="FavoriteButtonStyle" TargetType="Button" BasedOn="{StaticResource IconButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Game.IsFavorite}" Value="True">
+                    <Setter Property="Foreground" Value="#FFD166" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SmallIconButtonStyle" TargetType="Button" BasedOn="{StaticResource IconButtonStyle}">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style x:Key="StarButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorDisabledBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock Text="★" FontSize="18" Margin="1,0" Foreground="{TemplateBinding Foreground}" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOn}" Value="True">
+                    <Setter Property="Foreground" Value="#FFD166" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ChipStyle" TargetType="Border">
+            <Setter Property="Background" Value="#14FFFFFF" />
+            <Setter Property="BorderBrush" Value="#26FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="11,3" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+        </Style>
+
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#D9101015" />
+            <Setter Property="BorderBrush" Value="#2EFFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="14,9,14,13" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDropTarget}" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                    <Setter Property="BorderThickness" Value="2" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="CaptionStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+
+        <Style x:Key="SmallLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+
+        <ContextMenu x:Key="CardMenu" x:Shared="False">
+            <MenuItem Header="{loc:Tr 'Tam genişlik'}" Tag="Full" Click="OnCardSizeMenuClick">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Checkmark24" Visibility="{Binding Size, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Full}" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Otomatik (yarım genişlik)'}" Tag="Auto" Click="OnCardSizeMenuClick">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Checkmark24" Visibility="{Binding Size, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Auto}" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Sola sabitle'}" Tag="Left" Click="OnCardSizeMenuClick">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Checkmark24" Visibility="{Binding Size, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Left}" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:Tr 'Sağa sabitle'}" Tag="Right" Click="OnCardSizeMenuClick">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Checkmark24" Visibility="{Binding Size, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Right}" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="{loc:Tr 'Varsayılan düzene dön'}" Click="OnResetLayoutMenuClick">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="ArrowReset24" />
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+
+        <!-- ================= card contents ================= -->
+
+        <DataTemplate x:Key="Card.activity">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="28" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Column="0" Grid.Row="0">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Grid.ColumnSpan" Value="3" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Size}" Value="Full">
+                                    <Setter Property="Grid.ColumnSpan" Value="1" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="{loc:Tr 'SON 14 GÜN'}" Style="{StaticResource CaptionStyle}" Margin="0,0,0,6" />
+                    <ItemsControl ItemsSource="{Binding Panel.DayBars}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:DayBar}">
+                                <StackPanel ToolTip="{Binding Tooltip}" Background="Transparent">
+                                    <Grid Height="58">
+                                        <Border Height="{Binding BarHeight}" VerticalAlignment="Bottom" Margin="0,0,3,0"
+                                                CornerRadius="3,3,0,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#33FFFFFF" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Label}" FontSize="10" HorizontalAlignment="Center" MinHeight="14"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <StackPanel>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Grid.Row" Value="1" />
+                            <Setter Property="Grid.Column" Value="0" />
+                            <Setter Property="Grid.ColumnSpan" Value="3" />
+                            <Setter Property="Margin" Value="0,12,0,0" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Size}" Value="Full">
+                                    <Setter Property="Grid.Row" Value="0" />
+                                    <Setter Property="Grid.Column" Value="2" />
+                                    <Setter Property="Grid.ColumnSpan" Value="1" />
+                                    <Setter Property="Margin" Value="0" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="{loc:Tr 'OTURUMLAR'}" Style="{StaticResource CaptionStyle}" Margin="0,0,0,4" />
+                    <ItemsControl ItemsSource="{Binding Panel.RecentSessions}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:SessionRow}">
+                                <Grid Margin="0,3">
+                                    <TextBlock Text="{Binding DateText}" FontSize="12.5"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Text="{Binding DurationText}" FontSize="12.5" HorizontalAlignment="Right" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{loc:Tr 'Henüz oturum kaydı yok. Oyunu oynadıkça burada görünür.'}" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                        <TextBlock.Visibility>
+                            <Binding Path="Panel.HasSessions" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                        </TextBlock.Visibility>
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Card.info">
+            <ItemsControl ItemsSource="{Binding Panel.Facts}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ctrl:FlowTwoColumnPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:FactItem}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Label}" Style="{StaticResource SmallLabelStyle}" />
+                            <TextBlock Text="{Binding Value}" FontSize="13" FontWeight="Medium" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Card.tags">
+            <StackPanel>
+                <ItemsControl ItemsSource="{Binding Panel.Genres}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource ChipStyle}">
+                                <TextBlock Text="{Binding}" FontSize="12.5" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="{loc:Tr 'Etiketlerim'}" Style="{StaticResource SmallLabelStyle}" Margin="0,2,0,6" />
+                <ItemsControl ItemsSource="{Binding Panel.Tags}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource ChipStyle}" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}" Padding="0">
+                                <Button Cursor="Hand" ToolTip="{loc:Tr 'Etiketi kaldır'}" Padding="11,3"
+                                        Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <ContentPresenter Margin="{TemplateBinding Padding}" />
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <TextBlock FontSize="12.5">
+                                        <Run Text="{Binding Mode=OneWay}" /><Run Text=" ×" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                    </TextBlock>
+                                </Button>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ui:TextBox Text="{Binding Panel.NewTag, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{loc:Tr '+ etiket ekle (Enter)'}"
+                            MaxWidth="220" HorizontalAlignment="Left">
+                    <ui:TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding Panel.AddTagCommand}" />
+                    </ui:TextBox.InputBindings>
+                </ui:TextBox>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Card.gallery">
+            <StackPanel>
+                <Grid Margin="0,0,0,8" Cursor="Hand" ToolTip="{loc:Tr 'Fragmanı tarayıcıda aç'}">
+                    <Grid.Visibility>
+                        <Binding Path="Panel.TrailerUrl" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </Grid.Visibility>
+                    <Border CornerRadius="8" Height="150">
+                        <Border.Background>
+                            <ImageBrush Stretch="UniformToFill" ctrl:AsyncImage.DecodeWidth="640"
+                                        ctrl:AsyncImage.Source="{Binding Panel.TrailerThumbnailUrl}" />
+                        </Border.Background>
+                    </Border>
+                    <Border Width="46" Height="46" CornerRadius="23" Background="#99000000" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ui:SymbolIcon Symbol="Play24" Filled="True" FontSize="20" />
+                    </Border>
+                    <Button Style="{StaticResource OverlayHitButtonStyle}" Command="{Binding Panel.OpenUrlCommand}" CommandParameter="{Binding Panel.TrailerUrl}" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding Panel.Screenshots}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Width="150" Height="84" Margin="0,0,8,8" Cursor="Hand" ToolTip="{loc:Tr 'Büyüt'}">
+                                <Border CornerRadius="6">
+                                    <Border.Background>
+                                        <ImageBrush Stretch="UniformToFill" ctrl:AsyncImage.DecodeWidth="320" ctrl:AsyncImage.Source="{Binding}" />
+                                    </Border.Background>
+                                </Border>
+                                <Button Style="{StaticResource OverlayHitButtonStyle}"
+                                        Command="{Binding DataContext.OpenViewerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{loc:Tr 'Bu oyun için görsel yok. Üst veriyi Steam\'den getirirseniz ekran görüntüleri ve fragman burada görünür.'}"
+                           TextWrapping="Wrap" FontSize="12.5" FontStyle="Italic"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Panel.HasGallery}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Card.about">
+            <Grid Background="Transparent" MouseEnter="OnAboutMouseEnter" MouseLeave="OnAboutMouseLeave">
+                <ItemsControl ItemsSource="{Binding Panel.AboutBlocks}">
+                    <ItemsControl.Style>
+                        <Style TargetType="ItemsControl">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Panel.Game.Description}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ItemsControl.Style>
+                    <ItemsControl.Resources>
+                        <DataTemplate DataType="{x:Type vm:AboutNotice}">
+                            <Border Margin="0,0,0,12" Padding="12,10" CornerRadius="8" Background="#26FFB900" BorderBrush="#40FFB900" BorderThickness="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <ui:Button Grid.Column="1" Margin="12,0,0,0" Appearance="Primary" VerticalAlignment="Center"
+                                               Content="{loc:Tr 'Yükle'}" Click="OnInstallAvifClick" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                        <DataTemplate DataType="{x:Type vm:AboutImage}">
+                            <Border Margin="0,2,0,12" HorizontalAlignment="Left" MaxWidth="720" CornerRadius="8" ClipToBounds="True">
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{loc:Tr 'Aç'}" Click="OnOpenImageMenuClick">
+                                            <MenuItem.Icon>
+                                                <ui:SymbolIcon Symbol="Image24" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <Image Stretch="Uniform" ctrl:AsyncImage.DecodeWidth="800" ctrl:AsyncImage.Source="{Binding DisplayUrl}" />
+                            </Border>
+                        </DataTemplate>
+                        <DataTemplate DataType="{x:Type vm:AboutClip}">
+                            <Grid x:Name="ClipRoot" Margin="0,2,0,12" HorizontalAlignment="Left" MaxWidth="{Binding ThumbWidth}">
+                                <Grid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{loc:Tr 'Aç'}" Click="OnOpenClipMenuClick">
+                                            <MenuItem.Icon>
+                                                <ui:SymbolIcon Symbol="Play24" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
+                                <Border x:Name="ClipFrameBorder" CornerRadius="8" Background="#26000000" BorderBrush="#1AFFFFFF"
+                                        BorderThickness="1" ClipToBounds="True">
+                                    <Grid>
+                                        <!-- reserves the clip's height before its first frame is there -->
+                                        <Rectangle Width="{Binding ThumbWidth}" Height="{Binding ThumbHeight}" Fill="Transparent" />
+                                        <Image Source="{Binding Frame}" Stretch="Uniform" />
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                        <DataTemplate DataType="{x:Type vm:AboutText}">
+                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="13" LineHeight="20" Margin="0,0,0,8"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Kind}" Value="Heading">
+                                                <Setter Property="FontSize" Value="15" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                <Setter Property="Margin" Value="0,10,0,6" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Kind}" Value="Bullet">
+                                                <Setter Property="Margin" Value="12,0,0,3" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.Resources>
+                </ItemsControl>
+                <TextBlock Text="{loc:Tr 'Bu oyun için henüz üst veri bulunmuyor. Üstteki bulut ikonundan Steam, SteamGridDB veya IGDB ile eşleştirebilirsiniz.'}"
+                           TextWrapping="Wrap" FontSize="13" FontStyle="Italic"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                    <TextBlock.Visibility>
+                        <Binding Path="Panel.Game.Description" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                    </TextBlock.Visibility>
+                </TextBlock>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Card.notes">
+            <StackPanel>
+                <ui:TextBox Text="{Binding Panel.Notes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap"
+                            MinHeight="84" VerticalContentAlignment="Top"
+                            PlaceholderText="{loc:Tr 'Örn. 2. bölümde yan görevleri kaçırma.'}" />
+                <TextBlock Text="{loc:Tr 'Yalnızca bu bilgisayarda saklanır.'}" Style="{StaticResource SmallLabelStyle}" Margin="0,6,0,0" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Card.achievements">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Panel.AchievementsSummary}" FontWeight="SemiBold" FontSize="15">
+                            <TextBlock.Visibility>
+                                <Binding Path="Panel.HasAchievements" Converter="{StaticResource NullToVisibilityConverter}" />
+                            </TextBlock.Visibility>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Panel.AchievementsUpdatedText}" Style="{StaticResource SmallLabelStyle}" Margin="0,2,0,0">
+                            <TextBlock.Visibility>
+                                <Binding Path="Panel.AchievementsUpdatedText" Converter="{StaticResource NullToVisibilityConverter}" />
+                            </TextBlock.Visibility>
+                        </TextBlock>
+                    </StackPanel>
+                    <Button Grid.Column="1" Style="{StaticResource IconButtonStyle}" Command="{Binding Panel.RefreshAchievementsCommand}"
+                            IsEnabled="{Binding Panel.CanRefreshAchievements}" ToolTip="{loc:Tr 'Steam\'den yenile'}">
+                        <ui:SymbolIcon Symbol="ArrowSync24" FontSize="17" />
+                    </Button>
+                </Grid>
+
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Panel.AchievementsPercent, Mode=OneWay}" Height="6" Margin="0,10,0,10">
+                    <ProgressBar.Visibility>
+                        <Binding Path="Panel.HasAchievements" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </ProgressBar.Visibility>
+                </ProgressBar>
+                <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,6">
+                    <ProgressBar.Visibility>
+                        <Binding Path="Panel.IsAchievementsBusy" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </ProgressBar.Visibility>
+                </ProgressBar>
+
+                <TextBlock Text="{Binding Panel.AchievementsMessage}" TextWrapping="Wrap" FontSize="13" Margin="0,2,0,8"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                    <TextBlock.Visibility>
+                        <Binding Path="Panel.AchievementsMessage" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </TextBlock.Visibility>
+                </TextBlock>
+
+                <CheckBox Content="{loc:Tr 'Yalnızca açılmamışlar'}" IsChecked="{Binding Panel.ShowOnlyLockedAchievements}" Margin="0,0,0,6">
+                    <CheckBox.Visibility>
+                        <Binding Path="Panel.HasAchievements" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </CheckBox.Visibility>
+                </CheckBox>
+
+                <ItemsControl ItemsSource="{Binding Panel.VisibleAchievements}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:AchievementItem}">
+                            <Grid Margin="0,5" ToolTip="{Binding Tooltip}" Background="Transparent">
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
+                                        <Setter Property="Opacity" Value="0.6" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAchieved}" Value="True">
+                                                <Setter Property="Opacity" Value="1" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Grid.Style>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="6" ClipToBounds="True"
+                                        Background="#22FFFFFF" Margin="0,0,12,0">
+                                    <Image ctrl:AsyncImage.DecodeWidth="88" ctrl:AsyncImage.CacheOnDisk="True" ctrl:AsyncImage.Source="{Binding IconUrl}"
+                                           Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Description}" FontSize="12" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
+                                    <TextBlock Text="{Binding RarityText}" HorizontalAlignment="Right" FontSize="12.5" FontWeight="SemiBold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsRare}" Value="True">
+                                                        <Setter Property="Foreground" Value="#F2B45A" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding DateText}" HorizontalAlignment="Right" Style="{StaticResource SmallLabelStyle}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Button Content="{Binding Panel.ExpandAchievementsText}" Command="{Binding Panel.ToggleAllAchievementsCommand}"
+                        HorizontalAlignment="Left" Margin="0,8,0,0">
+                    <Button.Visibility>
+                        <Binding Path="Panel.CanExpandAchievements" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </Button.Visibility>
+                </Button>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Card.launch">
+            <StackPanel>
+                <TextBlock Text="{loc:Tr 'Argümanlar'}" Style="{StaticResource SmallLabelStyle}" Margin="0,0,0,3" />
+                <ui:TextBox Text="{Binding Panel.LaunchArguments, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="-windowed -nointro" />
+                <TextBlock Text="{loc:Tr 'Çalışma klasörü'}" Style="{StaticResource SmallLabelStyle}" Margin="0,10,0,3" />
+                <ui:TextBox Text="{Binding Panel.WorkingDirectory, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{loc:Tr 'Boşsa exe\'nin klasörü'}" />
+
+                <CheckBox Content="{loc:Tr 'Steam\'den başlat'}" IsChecked="{Binding Panel.LaunchViaSteam}" Margin="0,12,0,0" />
+                <TextBlock Text="{loc:Tr 'Steam Uygulama Kimliği'}" Style="{StaticResource SmallLabelStyle}" Margin="0,6,0,3" />
+                <ui:TextBox Text="{Binding Panel.SteamAppIdText, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{loc:Tr 'Steam\'den eşleştirince otomatik dolar'}" />
+                <TextBlock Text="{loc:Tr 'Açıkken oyun Steam üzerinden başlar (argümanlar Steam\'e iletilir); çalışma klasörü kullanılmaz.'}"
+                           Style="{StaticResource SmallLabelStyle}" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                <TextBlock Text="{loc:Tr 'Başlatma adresi'}" Style="{StaticResource SmallLabelStyle}" Margin="0,12,0,3" />
+                <ui:TextBox Text="{Binding Panel.LaunchUri, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="com.epicgames.launcher://apps/..." />
+                <TextBlock Text="{loc:Tr 'Epic, GOG, Battle.net, Xbox gibi başlatıcılar için. Doluysa exe ve Steam seçeneği yerine bu adres açılır.'}"
+                           Style="{StaticResource SmallLabelStyle}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                <TextBlock Text="{loc:Tr 'Geçerli bir adres girin (örn. epic://...) veya boş bırakın.'}" Foreground="#F2B45A"
+                           Style="{StaticResource SmallLabelStyle}" TextWrapping="Wrap" Margin="0,4,0,0">
+                    <TextBlock.Visibility>
+                        <Binding Path="Panel.IsLaunchUriInvalid" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </TextBlock.Visibility>
+                </TextBlock>
+
+                <CheckBox Content="{loc:Tr 'Yönetici olarak çalıştır'}" IsChecked="{Binding Panel.RunAsAdmin}" Margin="0,12,0,0" />
+
+                <TextBlock Text="{loc:Tr 'Süre takibi için işlem adı'}" Style="{StaticResource SmallLabelStyle}" Margin="0,12,0,3" />
+                <ui:TextBox Text="{Binding Panel.TrackedProcessName, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Game-Win64-Shipping.exe" />
+                <TextBlock Text="{loc:Tr 'Oyunun kendi başlatıcısı varsa, gerçek oyun exe\'sinin adını yazın (birden fazlaysa virgülle ayırın). Boşsa seçili exe izlenir.'}"
+                           Style="{StaticResource SmallLabelStyle}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                <TextBlock Text="{loc:Tr 'Süre takibi için bir exe seçin veya işlem adı yazın; yoksa bu oyunun süresi sayılmaz.'}"
+                           Foreground="#F2B45A" Style="{StaticResource SmallLabelStyle}" TextWrapping="Wrap" Margin="0,6,0,0">
+                    <TextBlock.Visibility>
+                        <Binding Path="Panel.Game.LacksPlaytimeTracking" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </TextBlock.Visibility>
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="{loc:Tr 'Varsayılan düzene dön'}" Click="OnResetLayoutMenuClick">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="ArrowReset24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </ContextMenu>
+        </Grid.ContextMenu>
+
+        <Grid Margin="0,40,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+                <!-- ============ header (stays in place) ============ -->
+                <Grid Grid.Row="0" Margin="22,0,22,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="112" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Width="112" Height="152" VerticalAlignment="Top" CornerRadius="10"
+                            BorderBrush="#26FFFFFF" BorderThickness="1" Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                        <Border CornerRadius="9">
+                            <Border.Background>
+                                <ImageBrush Stretch="UniformToFill" ctrl:AsyncImage.DecodeWidth="240"
+                                            ctrl:AsyncImage.Source="{Binding Game.CoverImagePath}" />
+                            </Border.Background>
+                        </Border>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" Margin="18,0,0,0">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="10,0,0,0">
+                                <Button Style="{StaticResource FavoriteButtonStyle}" Command="{Binding ToggleFavoriteCommand}" ToolTip="{loc:Tr 'Favorilere ekle / çıkar'}">
+                                    <ui:SymbolIcon Symbol="Star24" FontSize="17" Filled="{Binding Game.IsFavorite}" />
+                                </Button>
+                                <Button x:Name="FolderButton" Style="{StaticResource IconButtonStyle}" Command="{Binding OpenFolderCommand}">
+                                    <Button.ToolTip>
+                                        <TextBlock>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="{loc:Tr 'Klasörü aç'}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Game.HasExecutable}" Value="False">
+                                                            <Setter Property="Text" Value="{loc:Tr 'Çalıştırılabilir dosya bulunamadı'}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Button.ToolTip>
+                                    <Grid>
+                                        <ui:SymbolIcon Symbol="FolderOpen24" FontSize="17">
+                                            <ui:SymbolIcon.Visibility>
+                                                <Binding Path="Game.HasExecutable" Converter="{StaticResource NullToVisibilityConverter}" />
+                                            </ui:SymbolIcon.Visibility>
+                                        </ui:SymbolIcon>
+                                        <ui:SymbolIcon Symbol="FolderProhibited24" FontSize="17" Foreground="#F2B45A">
+                                            <ui:SymbolIcon.Visibility>
+                                                <Binding Path="Game.HasExecutable" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
+                                            </ui:SymbolIcon.Visibility>
+                                        </ui:SymbolIcon>
+                                    </Grid>
+                                </Button>
+                                <Popup IsOpen="{Binding IsFolderNoticeOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=FolderButton}"
+                                       Placement="Bottom" VerticalOffset="6" StaysOpen="False" AllowsTransparency="True"
+                                       PopupAnimation="Fade">
+                                    <Border Margin="8" Padding="14,10" CornerRadius="10" MaxWidth="300" Background="#F22B2630"
+                                            BorderBrush="#66F2B45A" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="{loc:Tr 'Çalıştırılabilir dosya bulunamadı'}" FontWeight="SemiBold" Foreground="#F2B45A" />
+                                            <TextBlock Text="{loc:Tr 'Düzenle ikonundan exe yolunu seçin.'}" TextWrapping="Wrap" FontSize="12.5" Margin="0,3,0,0"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </Border>
+                                </Popup>
+                                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding CopyExePathCommand}" ToolTip="{loc:Tr 'Exe yolunu kopyala'}">
+                                    <ui:SymbolIcon Symbol="Copy24" FontSize="17" />
+                                </Button>
+                                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding Library.OpenDetailsCommand}"
+                                        CommandParameter="{Binding Game}" ToolTip="{loc:Tr 'Düzenle'}">
+                                    <ui:SymbolIcon Symbol="Edit24" FontSize="17" />
+                                </Button>
+                                <Button Style="{StaticResource IconButtonStyle}" Click="OnMatchClick" ToolTip="{loc:Tr 'Üst veri getir'}">
+                                    <Button.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="{loc:Tr 'Steam\'den'}" Command="{Binding Library.MatchWithSteamCommand}"
+                                                      CommandParameter="{Binding Game}" />
+                                            <MenuItem Header="{loc:Tr 'Steam verilerini yenile'}" Command="{Binding Library.RefreshFromSteamCommand}"
+                                                      CommandParameter="{Binding Game}" />
+                                            <MenuItem Header="{loc:Tr 'SteamGridDB\'den'}" Command="{Binding Library.MatchWithSteamGridDbCommand}"
+                                                      CommandParameter="{Binding Game}" />
+                                            <MenuItem Header="{loc:Tr 'IGDB\'den'}" Command="{Binding Library.MatchWithIgdbCommand}"
+                                                      CommandParameter="{Binding Game}" />
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                    <ui:SymbolIcon Symbol="CloudArrowDown24" FontSize="17" />
+                                </Button>
+                                <Button Style="{StaticResource IconButtonStyle}" Click="OnRemoveClick" ToolTip="{loc:Tr 'Kütüphaneden kaldır'}">
+                                    <ui:SymbolIcon Symbol="Delete24" FontSize="17" />
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Game.DisplayName}" Style="{StaticResource GameNameDetailsStyle}"
+                                       TextWrapping="Wrap" VerticalAlignment="Top" Margin="0,3,0,0" />
+                        </DockPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Border Style="{StaticResource ChipStyle}" Padding="8,2" CornerRadius="6" Margin="0,0,10,0" VerticalAlignment="Center">
+                                <Border.Visibility>
+                                    <Binding Path="Game.CommunityRating" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </Border.Visibility>
+                                <TextBlock Text="{Binding Game.CommunityRating, StringFormat=★ {0:F0}}" FontSize="12.5" />
+                            </Border>
+                            <TextBlock Text="{Binding Game.ReleaseDateUtc, StringFormat={}{0:yyyy}}" FontSize="12.5" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,10,0">
+                                <TextBlock.Visibility>
+                                    <Binding Path="Game.ReleaseDateUtc" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </TextBlock.Visibility>
+                            </TextBlock>
+                            <ComboBox ItemsSource="{Binding StatusOptions}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                                      SelectedValue="{Binding Status}" MinWidth="118" Margin="0,0,10,0" VerticalAlignment="Center" />
+                            <ItemsControl ItemsSource="{Binding Stars}" VerticalAlignment="Center">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:StarItem}">
+                                        <Button Style="{StaticResource StarButtonStyle}" ToolTip="{loc:Tr 'Puanım'}"
+                                                Command="{Binding DataContext.SetRatingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding Index}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        <ui:Button Appearance="Primary" HorizontalAlignment="Left" Margin="0,12,0,0" Padding="20,8"
+                                   Icon="{ui:SymbolIcon Play24}" Command="{Binding Library.LaunchGameCommand}"
+                                   CommandParameter="{Binding Game}" IsEnabled="{Binding Game.CanLaunch}">
+                            <TextBlock>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="{loc:Tr 'Oynat'}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Game.IsRunning}" Value="True">
+                                                <Setter Property="Text" Value="{loc:Tr '● Çalışıyor'}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </ui:Button>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <StackPanel ToolTip="{Binding Game.PlayCountTooltip}" Background="Transparent">
+                                <TextBlock Text="{loc:Tr 'Toplam süre'}" FontSize="10.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Text="{Binding Game.TotalPlaytimeText}" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <StackPanel ToolTip="{Binding Game.LastPlayedTooltip}" Background="Transparent" Margin="16,0,0,0">
+                                <TextBlock Text="{loc:Tr 'Son oynanma'}" FontSize="10.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Text="{Binding Game.LastPlayedText}" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <StackPanel ToolTip="{loc:Tr 'Toplam süre ÷ oturum sayısı'}" Background="Transparent" Margin="16,0,0,0">
+                                <TextBlock Text="{loc:Tr 'Ort. oturum'}" FontSize="10.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Text="{Binding Game.AveragePlaytimeText}" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <StackPanel ToolTip="{Binding Game.AddedTooltip}" Background="Transparent" Margin="16,0,0,0">
+                                <TextBlock Text="{loc:Tr 'Eklendi'}" FontSize="10.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Text="{Binding Game.AddedText}" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <!-- ============ cards (the only scrolling part) ============ -->
+                <ScrollViewer x:Name="CardsScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" ScrollChanged="OnCardsScrollChanged">
+                <ItemsControl x:Name="CardsHost" ItemsSource="{Binding Cards}" AllowDrop="True" Background="Transparent" SizeChanged="OnCardsHostSizeChanged"
+                              RequestBringIntoView="OnCardsRequestBringIntoView"
+                              Margin="22,2,22,24"
+                              DragOver="OnHostDragOver" Drop="OnHostDrop">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ctrl:MasonryPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:DetailCardViewModel}">
+                            <Border x:Name="CardBorder" Style="{StaticResource CardStyle}" AllowDrop="True"
+                                    ContextMenu="{StaticResource CardMenu}"
+                                    DragOver="OnCardDragOver" DragLeave="OnCardDragLeave" Drop="OnCardDrop">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,9" Height="24">
+                                        <Button x:Name="ResizeButton" DockPanel.Dock="Right" Style="{StaticResource SmallIconButtonStyle}"
+                                                Opacity="0" Click="OnResizeClick">
+                                            <Grid>
+                                                <ui:SymbolIcon Symbol="ArrowMaximize24" FontSize="14" />
+                                                <ui:SymbolIcon Symbol="ArrowMinimize24" FontSize="14"
+                                                               Visibility="{Binding Size, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Full}" />
+                                            </Grid>
+                                            <Button.ToolTip>
+                                                <ToolTip Content="{loc:Tr 'Boyutu değiştir (tam / yarım genişlik)'}" />
+                                            </Button.ToolTip>
+                                        </Button>
+                                        <TextBlock DockPanel.Dock="Left" Text="⋮⋮" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                   Background="Transparent" Cursor="SizeAll" ToolTip="{loc:Tr 'Sürükleyerek taşı'}"
+                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                   PreviewMouseLeftButtonDown="OnGripMouseDown" MouseMove="OnGripMouseMove" />
+                                        <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </DockPanel>
+                                    <ContentControl Content="{Binding}" ContentTemplateSelector="{StaticResource CardContentSelector}" />
+                                </StackPanel>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <Trigger SourceName="CardBorder" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ResizeButton" Property="Opacity" Value="1" />
+                                </Trigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                </ScrollViewer>
+        </Grid>
+
+        <!-- ============ full-size screenshot viewer ============ -->
+        <Grid x:Name="Viewer" Panel.ZIndex="20" Focusable="True" Background="#EB000000">
+            <Grid.Visibility>
+                <Binding Path="IsViewerOpen" Converter="{StaticResource NullToVisibilityConverter}" />
+            </Grid.Visibility>
+            <Grid.InputBindings>
+                <KeyBinding Key="Escape" Command="{Binding CloseViewerCommand}" />
+                <KeyBinding Key="Left" Command="{Binding PreviousScreenshotCommand}" />
+                <KeyBinding Key="Right" Command="{Binding NextScreenshotCommand}" />
+                <MouseBinding MouseAction="LeftClick" Command="{Binding CloseViewerCommand}" />
+            </Grid.InputBindings>
+            <Image Margin="64,48" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                   Source="{Binding ViewerImageUrl, Converter={StaticResource UrlToImageConverter}, ConverterParameter=1920}" />
+            <Button HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0" Style="{StaticResource IconButtonStyle}"
+                    Width="44" Height="44" Command="{Binding PreviousScreenshotCommand}" ToolTip="{loc:Tr 'Önceki'}">
+                <ui:SymbolIcon Symbol="ChevronLeft24" FontSize="22" />
+            </Button>
+            <Button HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" Style="{StaticResource IconButtonStyle}"
+                    Width="44" Height="44" Command="{Binding NextScreenshotCommand}" ToolTip="{loc:Tr 'Sonraki'}">
+                <ui:SymbolIcon Symbol="ChevronRight24" FontSize="22" />
+            </Button>
+            <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,12,0" Style="{StaticResource IconButtonStyle}"
+                    Command="{Binding CloseViewerCommand}" ToolTip="{loc:Tr 'Kapat'}">
+                <ui:SymbolIcon Symbol="Dismiss24" FontSize="17" />
+            </Button>
+            <TextBlock Text="{Binding ViewerCounter}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Grid>
+
+        <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18" Padding="16,8" CornerRadius="8"
+                Background="#E62B2630" BorderBrush="#26FFFFFF" BorderThickness="1" IsHitTestVisible="False">
+            <Border.Visibility>
+                <Binding Path="ToastMessage" Converter="{StaticResource NullToVisibilityConverter}" />
+            </Border.Visibility>
+            <TextBlock Text="{Binding ToastMessage}" FontSize="13" />
+        </Border>
+    </Grid>
+</UserControl>

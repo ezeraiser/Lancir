@@ -1,0 +1,173 @@
+<ui:FluentWindow x:Class="Lancir.App.Views.MatchCompareWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:Lancir.App.Markup"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:vm="clr-namespace:Lancir.App.ViewModels"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance vm:MatchCompareViewModel}"
+        Title="{loc:Tr 'Değişiklikleri Karşılaştır'}" Height="640" Width="640"
+        MinHeight="420" MinWidth="520"
+        WindowStartupLocation="CenterOwner"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        WindowCornerPreference="Round">
+    <ui:FluentWindow.Resources>
+        <Style x:Key="ChoiceCardBaseStyle" TargetType="Border">
+            <Setter Property="Padding" Value="14" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+        </Style>
+
+        <!-- "Mevcut" card: highlighted when UseNew is False (the old value is the active pick) -->
+        <Style x:Key="OldChoiceCardStyle" TargetType="Border" BasedOn="{StaticResource ChoiceCardBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding UseNew}" Value="False">
+                    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                    <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBackgroundBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- "Yeni" card: highlighted when UseNew is True (the new value is the active pick) -->
+        <Style x:Key="NewChoiceCardStyle" TargetType="Border" BasedOn="{StaticResource ChoiceCardBaseStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding UseNew}" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                    <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBackgroundBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Text field row: two clickable cards, old vs new -->
+        <DataTemplate x:Key="TextFieldTemplate" DataType="{x:Type vm:MatchCompareFieldViewModel}">
+            <StackPanel Margin="0,0,0,20">
+                <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Margin="0,0,6,0" Style="{StaticResource OldChoiceCardStyle}"
+                            MouseLeftButtonDown="OnUseOldClick">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Tr 'Mevcut'}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,6" />
+                            <TextBlock TextWrapping="Wrap" MaxHeight="80" TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="{Binding OldValue}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OldValue}" Value="{x:Null}">
+                                                <Setter Property="Text" Value="—" />
+                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource NewChoiceCardStyle}"
+                            MouseLeftButtonDown="OnUseNewClick">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Tr 'Yeni'}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,6" />
+                            <TextBlock TextWrapping="Wrap" MaxHeight="80" TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="{Binding NewValue}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasNewValue}" Value="False">
+                                                <Setter Property="Text" Value="{loc:Tr '(bulunamadı)'}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Image field row: two clickable cards showing a thumbnail preview -->
+        <DataTemplate x:Key="ImageFieldTemplate" DataType="{x:Type vm:MatchCompareFieldViewModel}">
+            <StackPanel Margin="0,0,0,20">
+                <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Margin="0,0,6,0" Style="{StaticResource OldChoiceCardStyle}"
+                            MouseLeftButtonDown="OnUseOldClick">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Tr 'Mevcut'}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,6" />
+                            <Border Height="120" CornerRadius="6" ClipToBounds="True"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <Image Source="{Binding OldValue, Converter={StaticResource FilePathToImageConverter}, ConverterParameter=260}"
+                                       Stretch="UniformToFill" />
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource NewChoiceCardStyle}"
+                            MouseLeftButtonDown="OnUseNewClick">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Tr 'Yeni'}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,6" />
+                            <Border Height="120" CornerRadius="6" ClipToBounds="True"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <Image Source="{Binding NewValue, Converter={StaticResource UrlToImageConverter}, ConverterParameter=260}"
+                                       Stretch="UniformToFill" />
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
+
+        <vm:MatchCompareFieldTemplateSelector x:Key="FieldTemplateSelector"
+                                               TextTemplate="{StaticResource TextFieldTemplate}"
+                                               ImageTemplate="{StaticResource ImageFieldTemplate}" />
+    </ui:FluentWindow.Resources>
+
+    <Grid Margin="0,0,0,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="{loc:Tr 'Değişiklikleri Karşılaştır'}" ShowMaximize="False" ShowMinimize="False" />
+
+        <TextBlock Grid.Row="1" Margin="20,4,20,12" TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+            <Run Text="{Binding HeaderText, Mode=OneWay}" />
+        </TextBlock>
+
+        <ScrollViewer Grid.Row="2" Margin="20,0,20,0" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Fields}" ItemTemplateSelector="{StaticResource FieldTemplateSelector}" />
+        </ScrollViewer>
+
+        <Grid Grid.Row="3" Margin="20,16,20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:Button Grid.Column="1" Content="{loc:Tr 'İptal'}" Margin="0,0,8,0" Click="OnCancelClick" />
+            <ui:Button Grid.Column="2" Content="{loc:Tr 'Uygula'}" Appearance="Primary" Click="OnApplyClick" />
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

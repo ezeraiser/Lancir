@@ -1,0 +1,296 @@
+<UserControl x:Class="Lancir.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:Lancir.App.Markup"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:Lancir.App.ViewModels"
+             xmlns:svc="clr-namespace:Lancir.App.Services"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:SettingsViewModel}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="{loc:Tr 'Ayarlar'}" FontSize="26" FontWeight="SemiBold" Margin="0,4,0,12" />
+        <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" Padding="0">
+            <TabItem Header="{loc:Tr 'Genel'}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="520" HorizontalAlignment="Left" Margin="0,16,0,16">
+                    <TextBlock Text="Dil / Language" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <ComboBox ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding SelectedLanguage}"
+                                      DisplayMemberPath="Label" HorizontalAlignment="Stretch" />
+                            <StackPanel Margin="0,12,0,0">
+                                <StackPanel.Visibility>
+                                    <Binding Path="NeedsRestart" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </StackPanel.Visibility>
+                                <TextBlock Text="{loc:Tr 'Dil değişikliği uygulamanın yeniden başlatılmasıyla geçerli olur.'}" FontSize="12"
+                                           TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <ui:Button Content="{loc:Tr 'Şimdi yeniden başlat'}" Command="{Binding RestartAppCommand}"
+                                           Appearance="Primary" HorizontalAlignment="Left" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="{loc:Tr 'Görünüm'}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="520" HorizontalAlignment="Left" Margin="0,16,0,16">
+                    <TextBlock Text="{loc:Tr 'Görünüm'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24"
+                            DataContext="{x:Static svc:GameNameAppearance.Instance}">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Tr 'Oyun adı yazısı'}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                                       Margin="0,0,0,12" TextWrapping="Wrap">
+                                <Run Text="{loc:Tr 'Kütüphane kutucukları, liste ve detay panelindeki oyun adları için geçerlidir. Değişiklikler anında uygulanır ve kaydedilir.'}" />
+                            </TextBlock>
+
+                            <TextBlock Text="{loc:Tr 'Yazı tipi'}" FontSize="12" Margin="0,0,0,4" />
+                            <ComboBox ItemsSource="{Binding FontOptions}" SelectedItem="{Binding SelectedFont}"
+                                      HorizontalAlignment="Stretch" Margin="0,0,0,12">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" FontFamily="{Binding}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <Grid Margin="0,0,0,4">
+                                <TextBlock Text="{loc:Tr 'Yazı boyutu'}" FontSize="12" />
+                                <TextBlock Text="{Binding BaseSize, StringFormat={}{0:F0}}" FontSize="12"
+                                           HorizontalAlignment="Right" />
+                            </Grid>
+                            <Slider Minimum="10" Maximum="24" TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Value="{Binding BaseSize}" Margin="0,0,0,12" />
+
+                            <TextBlock Text="{loc:Tr 'Kalınlık'}" FontSize="12" Margin="0,0,0,4" />
+                            <ComboBox ItemsSource="{Binding WeightOptions}" SelectedItem="{Binding SelectedWeight}"
+                                      DisplayMemberPath="Label" HorizontalAlignment="Stretch" Margin="0,0,0,12" />
+
+                            <TextBlock Text="{loc:Tr 'Önizleme: Heroes of Might and Magic: Olden Era'}" Margin="0,0,0,12"
+                                       Style="{StaticResource GameNameCardStyle}" TextTrimming="CharacterEllipsis" />
+
+                            <ui:Button Content="{loc:Tr 'Varsayılana dön'}" Command="{Binding ResetCommand}" HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="{loc:Tr 'Kütüphane'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24"
+                            DataContext="{x:Static svc:UiPreferences.Instance}">
+                        <StackPanel>
+                            <CheckBox Content="{loc:Tr 'Kutucuk görünümünde kapağın ortasındaki oynat düğmesini göster'}"
+                                      IsChecked="{Binding ShowGridPlayButton}" />
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Margin="0,6,0,0"
+                                       TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Kapalıyken oyunu detay panelindeki Oynat düğmesinden başlatırsınız. Liste görünümü etkilenmez.'}" />
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="{loc:Tr 'Steam'}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="520" HorizontalAlignment="Left" Margin="0,16,0,16">
+                    <TextBlock Text="{loc:Tr 'Steam hesabı'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                                       Margin="0,0,0,12" TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Steam kütüphanenizdeki oyunları ve oynama sürelerinizi içe aktarmak için. Kütüphane ekranındaki indirme ikonundan içe aktarırsınız.'}" />
+
+                            <TextBlock Text="{loc:Tr 'Profil adresi veya adı'}" FontSize="12" Margin="0,0,0,4" />
+                            <ui:TextBox Text="{Binding SteamProfile, UpdateSourceTrigger=PropertyChanged}"
+                                        PlaceholderText="https://steamcommunity.com/id/kullaniciadi" Margin="0,0,0,12" />
+
+                            <TextBlock Text="Steam Web API Key" FontSize="12" Margin="0,0,0,4" />
+                            <PasswordBox x:Name="SteamKeyBox" PasswordChanged="OnSteamKeyChanged" Margin="0,0,0,4" />
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                                       Margin="0,0,0,12" TextWrapping="Wrap">
+                                <Hyperlink NavigateUri="https://steamcommunity.com/dev/apikey" RequestNavigate="OnOpenLink">
+                                    steamcommunity.com/dev/apikey
+                                </Hyperlink>
+                                <Run Text="{loc:Tr ' adresinden ücretsiz alabilirsiniz (alan adı olarak localhost yazabilirsiniz). Anahtar bu bilgisayarda Windows hesabınıza bağlı olarak şifrelenip saklanır.'}" />
+                            </TextBlock>
+
+                            <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12"
+                                       Margin="0,0,0,12" TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Steam Gizlilik Ayarları\'nda &quot;Oyun ayrıntıları&quot; Herkese açık olmalı.'}" />
+
+                            <CheckBox Content="{loc:Tr 'Açılışta Steam sürelerini güncelle'}"
+                                      IsChecked="{Binding SyncSteamPlaytimeOnStart}" Margin="0,0,0,12" />
+
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="{loc:Tr 'Bağlantıyı dene'}" Command="{Binding TestSteamCommand}"
+                                           IsEnabled="{Binding CanTestSteam}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding SteamTestMessage}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                <TextBlock.Visibility>
+                                    <Binding Path="SteamTestMessage" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </TextBlock.Visibility>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:Button Grid.Column="0" Content="{loc:Tr 'Kaydet'}" Appearance="Primary" Command="{Binding SaveCommand}" />
+                        <TextBlock Grid.Column="1" Text="{loc:Tr 'Kaydedildi'}" Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                                   FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <TextBlock.Visibility>
+                                <Binding Path="IsSaved" Converter="{StaticResource NullToVisibilityConverter}" />
+                            </TextBlock.Visibility>
+                        </TextBlock>
+                    </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="{loc:Tr 'Görsel kaynakları'}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="520" HorizontalAlignment="Left" Margin="0,16,0,16">
+                    <TextBlock Text="{loc:Tr 'Kapak görseli kaynakları'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12"
+                               Margin="0,0,0,12" TextWrapping="Wrap">
+                        <Run Text="{loc:Tr 'Eşleştirmede önce Steam (anahtar gerekmez), bulunamazsa SteamGridDB, o da bulunamazsa IGDB denenir.'}" />
+                    </TextBlock>
+
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="SteamGridDB API Key" FontWeight="SemiBold" Margin="0,0,0,4" />
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                                       Margin="0,0,0,12" TextWrapping="Wrap">
+                                <Hyperlink NavigateUri="https://www.steamgriddb.com/profile/preferences/api"
+                                           RequestNavigate="OnOpenLink">
+                                    steamgriddb.com
+                                </Hyperlink>
+                                <Run Text="{loc:Tr ' üzerinden ücretsiz alabilirsiniz.'}" />
+                            </TextBlock>
+                            <ui:TextBox Text="{Binding SteamGridDbApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                        PlaceholderText="{loc:Tr 'API key\'inizi buraya yapıştırın'}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Tr 'IGDB (Twitch) Kimlik Bilgileri'}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                                       Margin="0,0,0,12" TextWrapping="Wrap">
+                                <Hyperlink NavigateUri="https://dev.twitch.tv/console/apps"
+                                           RequestNavigate="OnOpenLink">
+                                    dev.twitch.tv
+                                </Hyperlink>
+                                <Run Text="{loc:Tr ' üzerinden ücretsiz bir uygulama oluşturup Client ID/Secret alabilirsiniz.'}" />
+                            </TextBlock>
+                            <ui:TextBox Text="{Binding IgdbClientId, UpdateSourceTrigger=PropertyChanged}"
+                                        PlaceholderText="Client ID" Margin="0,0,0,6" />
+                            <ui:TextBox Text="{Binding IgdbClientSecret, UpdateSourceTrigger=PropertyChanged}"
+                                        PlaceholderText="Client Secret" />
+                        </StackPanel>
+                    </Border>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:Button Grid.Column="0" Content="{loc:Tr 'Kaydet'}" Appearance="Primary" Command="{Binding SaveCommand}" />
+                        <TextBlock Grid.Column="1" Text="{loc:Tr 'Kaydedildi'}" Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                                   FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <TextBlock.Visibility>
+                                <Binding Path="IsSaved" Converter="{StaticResource NullToVisibilityConverter}" />
+                            </TextBlock.Visibility>
+                        </TextBlock>
+                    </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="{loc:Tr 'Performans'}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="520" HorizontalAlignment="Left" Margin="0,16,0,16">
+                    <TextBlock Text="{loc:Tr 'Süre takibi'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                                       Margin="0,0,0,12" TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Hiçbir oyun çalışmıyorken yeni başlayan bir oyun bu aralıkla aranır. Oyun çalışırken birkaç saniyede bir izlenir ve oturumun başlangıcı oyunun gerçek başlama zamanından hesaplanır; bu yüzden uzun aralık süre kaybettirmez, yalnızca başlangıcın fark edilmesini geciktirir. Daha uzun aralık daha az işlemci kullanır.'}" />
+                            <Grid Margin="0,0,0,4">
+                                <TextBlock Text="{loc:Tr 'Yeni oyun arama aralığı'}" FontSize="12" />
+                                <TextBlock Text="{Binding PlaytimeCheckText}" FontSize="12" HorizontalAlignment="Right" />
+                            </Grid>
+                            <Slider Minimum="{Binding MinCheckSeconds, Mode=OneWay}" Maximum="{Binding MaxCheckSeconds, Mode=OneWay}"
+                                    TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding PlaytimeCheckSeconds}" />
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="{loc:Tr 'Bellek'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                                       Margin="0,0,0,12" TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Uygulamanın bellek kullanımı seçtiğiniz sınıra gelince önbellekler boşaltılır, çöp toplama çalışır ve kullanılmayan bellek Windows\'a geri verilir. Kontrol 30 saniyede bir yapılır ve neredeyse hiç işlemci harcamaz.'}" />
+
+                            <CheckBox Content="{loc:Tr 'Belleği otomatik temizle'}" IsChecked="{Binding MemoryTrimEnabled}" />
+
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0"
+                                        IsEnabled="{Binding MemoryTrimEnabled}">
+                                <TextBlock Text="{loc:Tr 'Sınır (MB):'}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                <ComboBox ItemsSource="{Binding MemoryLimitOptions}" SelectedItem="{Binding MemoryTrimThresholdMb}"
+                                          MinWidth="110" />
+                            </StackPanel>
+
+                            <CheckBox Content="{loc:Tr 'Pencere arka plana geçince de temizle'}"
+                                      IsChecked="{Binding MemoryTrimOnBackground}" IsEnabled="{Binding MemoryTrimEnabled}" Margin="0,12,0,0" />
+                            <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Margin="0,4,0,0"
+                                       TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Önerilmez: Windows belleği tekrar geri yükleyeceği için işlemci kullanımı artabilir.'}" />
+
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <ui:Button Content="{loc:Tr 'Şimdi temizle'}" Command="{Binding TrimNowCommand}"
+                                           IsEnabled="{Binding CanTrimNow}" Margin="0,0,8,0" />
+                                <ui:Button Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RefreshMemoryCommand}"
+                                           ToolTip="{loc:Tr 'Yenile'}" Margin="0,0,12,0" />
+                                <TextBlock Text="{Binding CurrentMemoryText}" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding TrimResultText}" FontSize="12" Margin="0,8,0,0"
+                                       Foreground="{DynamicResource SystemFillColorSuccessBrush}">
+                                <TextBlock.Visibility>
+                                    <Binding Path="TrimResultText" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </TextBlock.Visibility>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>

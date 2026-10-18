@@ -1,0 +1,222 @@
+<ui:FluentWindow x:Class="Lancir.App.Views.GameDetailsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:Lancir.App.Markup"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:vm="clr-namespace:Lancir.App.ViewModels"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance vm:GameDetailsViewModel}"
+        Title="{loc:Tr 'Oyun Detayları'}" Height="760" Width="540"
+        MinHeight="480" MinWidth="420"
+        WindowStartupLocation="CenterOwner"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        WindowCornerPreference="Round">
+    <Grid Margin="0,0,0,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="{loc:Tr 'Oyun Detayları'}" ShowMaximize="False" ShowMinimize="False" />
+
+        <ScrollViewer Grid.Row="1" Margin="20,4,20,0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="{loc:Tr 'İsim'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ui:TextBox Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,16" />
+
+                <TextBlock Text="{loc:Tr 'Açıklama'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ui:TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                            AcceptsReturn="True" TextWrapping="Wrap" Height="120"
+                            VerticalContentAlignment="Top" Margin="0,0,0,16" />
+
+                <TextBlock Text="{loc:Tr 'Tür / Etiketler'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ui:TextBox Text="{Binding Genres, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="{loc:Tr 'Örn: Aksiyon, Macera'}" Margin="0,0,0,16" />
+
+                <TextBlock Text="{loc:Tr 'Çalıştırılabilir Dosya'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox Grid.Column="0" Text="{Binding ExecutablePath, UpdateSourceTrigger=PropertyChanged}"
+                                Margin="0,0,8,0" />
+                    <ui:Button Grid.Column="1" Content="{loc:Tr 'Gözat...'}" Click="OnBrowseExecutableClick" />
+                </Grid>
+
+                <TextBlock Text="{loc:Tr 'Steam Uygulama Kimliği'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox Grid.Column="0" Text="{Binding SteamAppIdText, UpdateSourceTrigger=PropertyChanged}"
+                                PlaceholderText="{loc:Tr 'Örn: 230410 (Steam mağaza adresindeki sayı)'}" Margin="0,0,8,0" />
+                    <ui:Button Grid.Column="1" Content="{loc:Tr 'Exe\'yi Steam\'den bul'}" Click="OnFindSteamExeClick"
+                               IsEnabled="{Binding CanFindSteamFolder}"
+                               ToolTip="{loc:Tr 'Steam\'in kurulum klasöründen oyunun exe\'sini bulup yukarıya yazar.'}" />
+                </Grid>
+                <TextBlock Text="{Binding SteamFindMessage}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                    <TextBlock.Visibility>
+                        <Binding Path="SteamFindMessage" Converter="{StaticResource NullToVisibilityConverter}" />
+                    </TextBlock.Visibility>
+                </TextBlock>
+                <TextBlock Text="{loc:Tr 'Geçerli bir sayı girin veya boş bırakın.'}" FontSize="12" Foreground="#F2B45A"
+                           Margin="0,0,0,16">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSteamAppIdInvalid}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <Border Height="12" />
+
+                <TextBlock Text="{loc:Tr 'Başlatma'}" FontSize="15" FontWeight="SemiBold" Margin="0,4,0,10" />
+
+                <CheckBox Content="{loc:Tr 'Steam\'den başlat'}" IsChecked="{Binding LaunchViaSteam}" Margin="0,0,0,2" />
+                <TextBlock Text="{loc:Tr 'Açıkken oyun Steam üzerinden başlar (argümanlar Steam\'e iletilir); çalışma klasörü kullanılmaz. Steam kimliği gerekir.'}"
+                           FontSize="12" TextWrapping="Wrap" Margin="0,0,0,14"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+
+                <TextBlock Text="{loc:Tr 'Başlatma adresi'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ui:TextBox Text="{Binding LaunchUri, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="com.epicgames.launcher://apps/..." Margin="0,0,0,2" />
+                <TextBlock Text="{loc:Tr 'Epic, GOG, Battle.net, Xbox gibi başlatıcılar için. Doluysa exe ve Steam seçeneği yerine bu adres açılır.'}"
+                           FontSize="12" TextWrapping="Wrap" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                <TextBlock Text="{loc:Tr 'Geçerli bir adres girin (örn. epic://...) veya boş bırakın.'}" FontSize="12"
+                           Foreground="#F2B45A" TextWrapping="Wrap" Margin="0,0,0,4">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLaunchUriInvalid}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <Border Height="10" />
+
+                <CheckBox Content="{loc:Tr 'Yönetici olarak çalıştır'}" IsChecked="{Binding RunAsAdmin}" Margin="0,0,0,14" />
+
+                <TextBlock Text="{loc:Tr 'Argümanlar'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ui:TextBox Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="-windowed -nointro" Margin="0,0,0,14" />
+
+                <TextBlock Text="{loc:Tr 'Çalışma klasörü'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Grid Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}"
+                                PlaceholderText="{loc:Tr 'Boşsa exe\'nin klasörü'}" Margin="0,0,8,0" />
+                    <ui:Button Grid.Column="1" Content="{loc:Tr 'Gözat...'}" Click="OnBrowseWorkingDirectoryClick" />
+                </Grid>
+
+                <TextBlock Text="{loc:Tr 'Süre takibi için işlem adı'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Grid Margin="0,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox Grid.Column="0" Text="{Binding TrackedProcessName, UpdateSourceTrigger=PropertyChanged}"
+                                PlaceholderText="Game-Win64-Shipping.exe" Margin="0,0,8,0" />
+                    <ui:Button Grid.Column="1" Content="{loc:Tr 'Gözat...'}" Click="OnBrowseTrackedProcessClick" />
+                </Grid>
+                <TextBlock Text="{loc:Tr 'Oyunun kendi başlatıcısı varsa, gerçek oyun exe\'sinin adını yazın (birden fazlaysa virgülle ayırın). Boşsa seçili exe izlenir.'}"
+                           FontSize="12" TextWrapping="Wrap" Margin="0,0,0,6"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                <TextBlock Text="{loc:Tr 'Süre takibi için bir exe seçin veya işlem adı yazın; yoksa bu oyunun süresi sayılmaz.'}"
+                           FontSize="12" Foreground="#F2B45A" TextWrapping="Wrap" Margin="0,0,0,16">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding LacksPlaytimeTracking}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <Border Height="4" />
+
+                <TextBlock Text="{loc:Tr 'Klasör'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="{Binding FolderPath}" TextWrapping="Wrap" Margin="0,0,0,16"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{loc:Tr 'Topluluk Puanı'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{Binding CommunityRating, StringFormat={}{0:F0}}"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CommunityRating}" Value="{x:Null}">
+                                            <Setter Property="Text" Value="—" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{loc:Tr 'Çıkış Tarihi'}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{Binding ReleaseDateUtc, StringFormat={}{0:dd.MM.yyyy}}"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ReleaseDateUtc}" Value="{x:Null}">
+                                            <Setter Property="Text" Value="—" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2" Margin="20,12,20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:Button Grid.Column="1" Content="{loc:Tr 'İptal'}" Margin="0,0,8,0" Click="OnCancelClick" />
+            <ui:Button Grid.Column="2" Content="{loc:Tr 'Kaydet'}" Appearance="Primary" Click="OnSaveClick" />
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

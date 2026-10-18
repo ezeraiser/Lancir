@@ -1,0 +1,58 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- Memory: a desktop app that sits open all day should not keep a big heap. -->
+    <ServerGarbageCollector>false</ServerGarbageCollector>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>false</TieredPGO>
+    <AutoreleasePoolSupport>false</AutoreleasePoolSupport>
+    <ApplicationIcon>Assets/Lancir.ico</ApplicationIcon>
+    <!-- no .pdb files next to the exe in Release builds -->
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets/Lancir.ico" />
+    <Resource Include="Assets/Lancir.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="LibVLCSharp" Version="3.9.*" />
+    <!-- The full libVLC package is 100+ MB; only what is needed to play the store clips is copied (see the VlcFile items below). -->
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Lancir.Core\Lancir.Core.csproj" />
+  </ItemGroup>
+
+
+  <!-- libVLC, trimmed to playing mp4/webm clips on the CPU: core, file access, mp4 + matroska demuxers,
+       libavcodec, packetizers, chroma conversion and the memory video output. About 30 MB instead of 110 MB. -->
+  <PropertyGroup>
+    <VlcRoot>$(PkgVideoLAN_LibVLC_Windows)\build\x64</VlcRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <VlcFile Include="$(VlcRoot)\libvlc.dll;$(VlcRoot)\libvlccore.dll" Dest="." />
+    <VlcFile Include="$(VlcRoot)\plugins\access\libfilesystem_plugin.dll" Dest="plugins\access" />
+    <VlcFile Include="$(VlcRoot)\plugins\demux\libmp4_plugin.dll;$(VlcRoot)\plugins\demux\libmkv_plugin.dll" Dest="plugins\demux" />
+    <VlcFile Include="$(VlcRoot)\plugins\codec\libavcodec_plugin.dll" Dest="plugins\codec" />
+    <VlcFile Include="$(VlcRoot)\plugins\packetizer\*.dll" Dest="plugins\packetizer" />
+    <VlcFile Include="$(VlcRoot)\plugins\video_chroma\*.dll" Dest="plugins\video_chroma" />
+    <VlcFile Include="$(VlcRoot)\plugins\video_output\libvmem_plugin.dll" Dest="plugins\video_output" />
+    <VlcFile Include="$(VlcRoot)\plugins\video_filter\*.dll" Dest="plugins\video_filter" />
+    <None Include="@(VlcFile)" Link="libvlc\%(Dest)\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

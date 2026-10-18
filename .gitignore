@@ -1,0 +1,17 @@
+# build output
+bin/
+obj/
+artifacts/
+
+# IDE / local tooling
+*.user
+.vs/
+.claude/
+
+# local test game folders (large, only used for trying the folder scanner)
+games/
+
+# never commit settings or keys
+settings.json
+*.pfx
+.env

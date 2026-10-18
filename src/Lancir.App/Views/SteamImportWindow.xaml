@@ -1,0 +1,97 @@
+<ui:FluentWindow x:Class="Lancir.App.Views.SteamImportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:Lancir.App.Markup"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:vm="clr-namespace:Lancir.App.ViewModels"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance vm:SteamImportViewModel}"
+        Title="{loc:Tr 'Steam\'den İçe Aktar'}" Height="720" Width="640"
+        MinHeight="480" MinWidth="520"
+        WindowStartupLocation="CenterOwner"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        WindowCornerPreference="Round"
+        Loaded="OnLoaded">
+    <Grid Margin="0,0,0,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="{loc:Tr 'Steam\'den İçe Aktar'}" ShowMaximize="False" ShowMinimize="False" />
+
+        <StackPanel Grid.Row="1" Margin="20,4,20,8">
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="13"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                <TextBlock.Visibility>
+                    <Binding Path="Message" Converter="{StaticResource NullToVisibilityConverter}" />
+                </TextBlock.Visibility>
+            </TextBlock>
+            <ProgressBar IsIndeterminate="True" Height="3" Margin="0,8,0,0">
+                <ProgressBar.Visibility>
+                    <Binding Path="IsBusy" Converter="{StaticResource NullToVisibilityConverter}" />
+                </ProgressBar.Visibility>
+            </ProgressBar>
+        </StackPanel>
+
+        <Grid Grid.Row="2" Margin="20,0,20,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <CheckBox Content="{loc:Tr 'Yalnızca oynananlar'}" IsChecked="{Binding OnlyPlayed}" Margin="0,0,16,0" />
+                <ui:Button Content="{loc:Tr 'Hepsini seç'}" Command="{Binding SelectAllCommand}" Margin="0,0,6,0" />
+                <ui:Button Content="{loc:Tr 'Hiçbirini seçme'}" Command="{Binding SelectNoneCommand}" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" Text="{Binding SummaryText}" VerticalAlignment="Center" FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="3" Margin="20,0,20,8" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Items}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:SteamImportItemViewModel}">
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="190" />
+                            </Grid.ColumnDefinitions>
+                            <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" Content="{Binding Name}" />
+                            <TextBlock Grid.Column="1" Text="{Binding PlaytimeText}" VerticalAlignment="Center"
+                                       HorizontalAlignment="Right" Margin="0,0,12,0" FontSize="12.5" />
+                            <TextBlock Grid.Column="2" Text="{Binding StateText}" VerticalAlignment="Center" FontSize="12"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Grid Grid.Row="4" Margin="20,8,20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <CheckBox Grid.Column="0" IsChecked="{Binding FetchStoreData}" VerticalAlignment="Center"
+                      Content="{loc:Tr 'Yeni oyunların mağaza verilerini ve kapaklarını getir (yavaş olabilir)'}" />
+            <ui:Button Grid.Column="1" Content="{loc:Tr 'Kapat'}" Margin="0,0,8,0" Click="OnCloseClick" />
+            <ui:Button Grid.Column="2" Content="{loc:Tr 'İçe aktar'}" Appearance="Primary"
+                       Command="{Binding ImportCommand}" IsEnabled="{Binding CanImport}" />
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

@@ -1,0 +1,56 @@
+name: Build
+
+# Builds and tests Lancir on every push to main and on pull requests, and produces the release .zip.
+#  - Run it by hand any time: Actions tab -> Build -> Run workflow. The zip is attached to the run (Artifacts).
+#  - Push a tag such as v1.0.0 to also publish a GitHub Release with the zip attached.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # only used to create a Release for a tag
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Lancir.sln
+
+      - name: Build
+        run: dotnet build Lancir.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test Lancir.sln -c Release --no-build
+
+      - name: Publish (win-x64, needs the .NET 8 Desktop Runtime on the target PC)
+        run: dotnet publish src/Lancir.App/Lancir.App.csproj -c Release -r win-x64 --self-contained false -o artifacts/Lancir-win-x64
+
+      - name: Zip
+        shell: pwsh
+        run: |
+          $name = if ($env:GITHUB_REF_TYPE -eq 'tag') { "Lancir-$($env:GITHUB_REF_NAME)-win-x64.zip" } else { "Lancir-win-x64.zip" }
+          Compress-Archive -Path artifacts/Lancir-win-x64/* -DestinationPath "artifacts/$name"
+          "ZIP_NAME=$name" >> $env:GITHUB_ENV
+
+      - name: Upload the zip as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lancir-win-x64
+          path: artifacts/${{ env.ZIP_NAME }}
+
+      - name: Create a GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$env:GITHUB_REF_NAME" "artifacts/$env:ZIP_NAME" --title "Lancir $env:GITHUB_REF_NAME" --generate-notes
