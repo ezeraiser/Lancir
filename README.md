@@ -33,3 +33,11 @@ Without any keys, matching with the Steam store still works; the optional source
 - `src/Lancir.Core` - scanning, matching, Steam/IGDB clients, playtime tracking, database (SQLite, EF Core)
 - `src/Lancir.App` - the WPF app
 - `src/Lancir.Tests` - unit tests
+
+## License
+
+Copyright (c) 2026 ezeraiser. All rights reserved. The source is published for viewing; no permission to use, copy, modify or
+distribute it is granted without the author's written permission (see [LICENSE](LICENSE)).
+
+Third-party components (including the LGPL-licensed VLC libraries) keep their own licenses: see
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Lancir is not affiliated with Valve, Twitch/IGDB, SteamGridDB or VideoLAN.
