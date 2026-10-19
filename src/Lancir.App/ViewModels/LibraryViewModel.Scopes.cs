@@ -86,25 +86,40 @@ public sealed partial class LibraryViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasActiveFilter))]
+    [NotifyPropertyChangedFor(nameof(FilterSummary))]
     private bool _filterPlaying;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasActiveFilter))]
+    [NotifyPropertyChangedFor(nameof(FilterSummary))]
     private bool _filterFinished;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasActiveFilter))]
+    [NotifyPropertyChangedFor(nameof(FilterSummary))]
     private bool _filterDropped;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasActiveFilter))]
+    [NotifyPropertyChangedFor(nameof(FilterSummary))]
     private bool _filterBacklog;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasActiveFilter))]
+    [NotifyPropertyChangedFor(nameof(FilterSummary))]
     private bool _filterFavorites;
 
     public bool HasActiveFilter => FilterPlaying || FilterFinished || FilterDropped || FilterBacklog || FilterFavorites;
+
+    /// <summary>The filter button's text: just "Filtre", or with how many filters are on.</summary>
+    public string FilterSummary
+    {
+        get
+        {
+            var count = new[] { FilterPlaying, FilterFinished, FilterDropped, FilterBacklog, FilterFavorites }.Count(on => on);
+            return count == 0 ? Lancir.App.Services.Loc.T("Filtre") : Lancir.App.Services.Loc.F("Filtre ({0})", count);
+        }
+    }
 
     partial void OnFilterPlayingChanged(bool value) => ApplyFilters();
 

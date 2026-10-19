@@ -120,8 +120,40 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <TextBlock Grid.Column="0" Text="{Binding ScopeTitle}" FontSize="26" FontWeight="SemiBold"
-                       VerticalAlignment="Center" />
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{Binding ScopeTitle}" FontSize="26" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <!-- one compact filter button; its drop-down lists the statuses (tick several: they add up) and favorites (narrows them) -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,3,0,0">
+                    <ui:Button x:Name="FilterButton" Icon="{ui:SymbolIcon Filter24}" Click="OnFilterButtonClick"
+                               Padding="9,6" ToolTip="{Binding FilterSummary}" AutomationProperties.Name="{loc:Tr 'Filtrele'}" />
+                    <Popup x:Name="FilterPopup" PlacementTarget="{Binding ElementName=FilterButton}" Placement="Bottom" StaysOpen="False"
+                           AllowsTransparency="True" PopupAnimation="Fade">
+                        <Border Background="{DynamicResource ApplicationBackgroundBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="8"
+                                BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+                            <StackPanel MinWidth="170">
+                                <CheckBox Content="{loc:Tr 'Oynuyorum'}" IsChecked="{Binding FilterPlaying}" />
+                                <CheckBox Content="{loc:Tr 'Bitirdim'}" IsChecked="{Binding FilterFinished}" />
+                                <CheckBox Content="{loc:Tr 'Bıraktım'}" IsChecked="{Binding FilterDropped}" />
+                                <CheckBox Content="{loc:Tr 'Listede'}" IsChecked="{Binding FilterBacklog}" />
+                                <Border Height="1" Margin="0,6" Background="{DynamicResource TextFillColorTertiaryBrush}" Opacity="0.4" />
+                                <CheckBox Content="{loc:Tr 'Yalnızca favoriler'}" IsChecked="{Binding FilterFavorites}" />
+                                <ui:Button Content="{loc:Tr 'Filtreyi temizle'}" Command="{Binding ClearFiltersCommand}" Appearance="Transparent"
+                                           Padding="8,4" Margin="0,8,0,0" HorizontalAlignment="Left">
+                                    <ui:Button.Visibility>
+                                        <Binding Path="HasActiveFilter" Converter="{StaticResource NullToVisibilityConverter}" />
+                                    </ui:Button.Visibility>
+                                </ui:Button>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                    <ui:Button Icon="{ui:SymbolIcon Dismiss16}" Command="{Binding ClearFiltersCommand}" Appearance="Transparent" Padding="8,6" Margin="6,0,0,0"
+                               ToolTip="{loc:Tr 'Filtreyi temizle'}" AutomationProperties.Name="{loc:Tr 'Filtreyi temizle'}">
+                        <ui:Button.Visibility>
+                            <Binding Path="HasActiveFilter" Converter="{StaticResource NullToVisibilityConverter}" />
+                        </ui:Button.Visibility>
+                    </ui:Button>
+                </StackPanel>
+            </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0" ToolTip="{loc:Tr 'Ayarlar → İşler bölümünden izleyebilir ve iptal edebilirsiniz'}">
                 <StackPanel.Visibility>
                     <Binding Path="IsMatchJobRunning" Converter="{StaticResource NullToVisibilityConverter}" />
@@ -129,32 +161,6 @@
                 <ui:ProgressRing IsIndeterminate="{Binding IsMatchJobRunning, Mode=OneWay}" Width="16" Height="16" Margin="0,0,8,0" />
                 <TextBlock Text="{Binding MatchJobText}" FontSize="12.5" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
-            <!-- filter chips: pick several; any chosen status, plus favorites when that chip is on -->
-            <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="0,10,0,0">
-                <ToggleButton IsChecked="{Binding FilterPlaying}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Oynuyorum'}" AutomationProperties.Name="{loc:Tr 'Oynuyorum'}">
-                    <ui:SymbolIcon Symbol="Play24" FontSize="16" />
-                </ToggleButton>
-                <ToggleButton IsChecked="{Binding FilterFinished}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Bitirdim'}" AutomationProperties.Name="{loc:Tr 'Bitirdim'}">
-                    <ui:SymbolIcon Symbol="CheckmarkCircle24" FontSize="16" />
-                </ToggleButton>
-                <ToggleButton IsChecked="{Binding FilterDropped}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Bıraktım'}" AutomationProperties.Name="{loc:Tr 'Bıraktım'}">
-                    <ui:SymbolIcon Symbol="DismissCircle24" FontSize="16" />
-                </ToggleButton>
-                <ToggleButton IsChecked="{Binding FilterBacklog}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Listede'}" AutomationProperties.Name="{loc:Tr 'Listede'}">
-                    <ui:SymbolIcon Symbol="Bookmark24" FontSize="16" />
-                </ToggleButton>
-                <!-- the four statuses add up; favorites is a separate filter on top of them -->
-                <Border Width="2" Height="26" Margin="6,1,12,6" CornerRadius="1" Background="{DynamicResource TextFillColorTertiaryBrush}" Opacity="0.7" />
-                <ToggleButton IsChecked="{Binding FilterFavorites}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Yalnızca favoriler'}" AutomationProperties.Name="{loc:Tr 'Favoriler'}">
-                    <ui:SymbolIcon Symbol="Star24" FontSize="16" />
-                </ToggleButton>
-                <ui:Button Icon="{ui:SymbolIcon FilterDismiss24}" Command="{Binding ClearFiltersCommand}" Appearance="Transparent" Padding="10,7" Margin="0,0,6,6"
-                           ToolTip="{loc:Tr 'Filtreyi temizle'}" AutomationProperties.Name="{loc:Tr 'Filtreyi temizle'}">
-                    <ui:Button.Visibility>
-                        <Binding Path="HasActiveFilter" Converter="{StaticResource NullToVisibilityConverter}" />
-                    </ui:Button.Visibility>
-                </ui:Button>
-            </WrapPanel>
         </Grid>
 
         <ui:InfoBar Grid.Row="1" Severity="Error" Title="{loc:Tr 'Hata'}" IsOpen="{Binding IsErrorOpen, Mode=TwoWay}"

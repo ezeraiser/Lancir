@@ -14,6 +14,8 @@ public partial class LibraryView : UserControl
         InitializeComponent();
     }
 
+    private void OnFilterButtonClick(object sender, RoutedEventArgs e) => FilterPopup.IsOpen = true;
+
     /// <summary>Opens the add menu (Steam game / by hand) under the button.</summary>
     /// <summary>Fills the game menu's "Özel kütüphaneye ekle" list with the user's libraries, ticking the ones the game is in.</summary>
     private void OnLibrariesSubmenuOpened(object sender, RoutedEventArgs e)

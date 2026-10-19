@@ -71,7 +71,10 @@
     <VlcFile Include="$(VlcRoot)\plugins\misc\libgnutls_plugin.dll" Dest="plugins\misc" />
     <VlcFile Include="$(VlcRoot)\plugins\demux\libadaptive_plugin.dll" Dest="plugins\demux" />
     <VlcFile Include="$(VlcRoot)\plugins\stream_filter\libinflate_plugin.dll" Dest="plugins\stream_filter" />
-    <VlcFile Include="$(VlcRoot)\plugins\audio_output\libmmdevice_plugin.dll" Dest="plugins\audio_output" />
+    <VlcFile Include="$(VlcRoot)\plugins\audio_output\libmmdevice_plugin.dll;$(VlcRoot)\plugins\audio_output\libwasapi_plugin.dll" Dest="plugins\audio_output" />
+    <!-- decoded sound has to be mixed, converted and resampled to what the sound card takes: without these there is a picture but no sound -->
+    <VlcFile Include="$(VlcRoot)\plugins\audio_mixer\*.dll" Dest="plugins\audio_mixer" />
+    <VlcFile Include="$(VlcRoot)\plugins\audio_filter\libaudio_format_plugin.dll;$(VlcRoot)\plugins\audio_filter\libtrivial_channel_mixer_plugin.dll;$(VlcRoot)\plugins\audio_filter\libsimple_channel_mixer_plugin.dll;$(VlcRoot)\plugins\audio_filter\libspeex_resampler_plugin.dll;$(VlcRoot)\plugins\audio_filter\libugly_resampler_plugin.dll" Dest="plugins\audio_filter" />
     <None Include="@(VlcFile)" Link="libvlc\%(Dest)\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
