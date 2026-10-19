@@ -96,6 +96,8 @@ public sealed partial class BackupViewModel : ObservableObject
         s.BackupIncludeMedia = IncludeMedia;
         s.BackupKeepCount = KeepCount;
         _settings.Save(s);
+        BackupScheduler.RequestCheck(); // a kind that was just switched on and is due is taken now
+
     }
 
     /// <summary>Reads the backup folder again (when the page opens, after a backup, after deleting one).</summary>

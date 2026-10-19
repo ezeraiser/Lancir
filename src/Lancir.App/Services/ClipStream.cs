@@ -20,6 +20,7 @@ public sealed class ClipStream : IDisposable
 
     private static readonly object Gate = new();
     private static LibVLC? _libVlc;
+    private static int _players; // players alive: the shared libVLC is only released while there are none
 
     private readonly string _path;
     private readonly int _width;
@@ -115,6 +116,7 @@ public sealed class ClipStream : IDisposable
                 {
                     player.Dispose();
                     media?.Dispose();
+                    Interlocked.Decrement(ref _players);
                 }
             });
         }
@@ -122,13 +124,28 @@ public sealed class ClipStream : IDisposable
 
     private MediaPlayer CreatePlayer()
     {
-        _media = new Media(Library(), _path, FromType.FromPath);
-        _media.AddOption(":input-repeat=65535");
+        LibVLC library;
+        lock (Gate)
+        {
+            library = Library();
+            _players++; // counted before libVLC is used, so ReleaseIfIdle cannot take it away in between
+        }
 
-        var player = new MediaPlayer(_media);
-        player.SetVideoFormat("RV32", (uint)_width, (uint)_height, (uint)(_width * 4));
-        player.SetVideoCallbacks(_lock, null, _display);
-        return player;
+        try
+        {
+            _media = new Media(library, _path, FromType.FromPath);
+            _media.AddOption(":input-repeat=65535");
+
+            var player = new MediaPlayer(_media);
+            player.SetVideoFormat("RV32", (uint)_width, (uint)_height, (uint)(_width * 4));
+            player.SetVideoCallbacks(_lock, null, _display);
+            return player;
+        }
+        catch
+        {
+            Interlocked.Decrement(ref _players);
+            throw;
+        }
     }
 
     private void OnFrame()
@@ -183,6 +200,19 @@ public sealed class ClipStream : IDisposable
 
         // The buffer is released once libVLC has stopped writing into it.
         Task.Delay(1000).ContinueWith(_ => Marshal.FreeHGlobal(_buffer));
+    }
+
+    /// <summary>Releases the shared libVLC instance (its threads and memory) when no clip is playing; the next clip creates it again.</summary>
+    public static void ReleaseIfIdle()
+    {
+        lock (Gate)
+        {
+            if (_players == 0 && _libVlc is not null)
+            {
+                _libVlc.Dispose();
+                _libVlc = null;
+            }
+        }
     }
 
     /// <summary>Releases the shared libVLC instance when the app exits.</summary>

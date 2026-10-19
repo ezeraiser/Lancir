@@ -322,7 +322,7 @@ public static class EnglishStrings
         ["Bu dosya resim olarak okunamadı."] = "This file could not be read as a picture.",
         ["Yedekleme"] = "Backup",
         ["Otomatik yedekleme"] = "Automatic backup",
-        ["Kütüphane, ayarlar ve görseller tek bir zip dosyasında yedeklenir. Oyun çalışırken yedek alınmaz, sonra denenir. Steam anahtarı şifreli kalır ve yalnızca bu Windows hesabında açılır."] = "Library, settings and pictures are backed up in one zip file. No backup is made while a game runs; it is tried again later. The Steam key stays encrypted and only opens in this Windows account.",
+        ["Kütüphane, ayarlar ve görseller tek bir zip dosyasında yedeklenir. Yedekler her gece 00:00'da alınır; o saatte Lancir kapalıysa bir sonraki açılışta alınır. Oyun çalışırken yedek alınmaz, oyun bitince alınır. Steam anahtarı şifreli kalır ve yalnızca bu Windows hesabında açılır."] = "Library, settings and pictures are backed up in one zip file. Backups are made every night at 00:00; if Lancir is closed then, it is made the next time it starts. No backup is made while a game runs; it is made when the game ends. The Steam key stays encrypted and only opens in this Windows account.",
         ["Günlük (son 7 yedek tutulur)"] = "Daily (the last 7 backups are kept)",
         ["Haftalık (son 4 yedek tutulur)"] = "Weekly (the last 4 backups are kept)",
         ["Aylık (son 12 yedek tutulur)"] = "Monthly (the last 12 backups are kept)",

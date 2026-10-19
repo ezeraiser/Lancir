@@ -561,7 +561,7 @@
                             CornerRadius="12" Padding="18" Margin="0,0,0,24">
                         <StackPanel>
                             <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap"
-                                       Text="{loc:Tr 'Kütüphane, ayarlar ve görseller tek bir zip dosyasında yedeklenir. Oyun çalışırken yedek alınmaz, sonra denenir. Steam anahtarı şifreli kalır ve yalnızca bu Windows hesabında açılır.'}" />
+                                       Text="{loc:Tr 'Kütüphane, ayarlar ve görseller tek bir zip dosyasında yedeklenir. Yedekler her gece 00:00\'da alınır; o saatte Lancir kapalıysa bir sonraki açılışta alınır. Oyun çalışırken yedek alınmaz, oyun bitince alınır. Steam anahtarı şifreli kalır ve yalnızca bu Windows hesabında açılır.'}" />
                             <CheckBox Content="{loc:Tr 'Günlük'}" IsChecked="{Binding DailyEnabled}" />
                             <CheckBox Content="{loc:Tr 'Haftalık'}" IsChecked="{Binding WeeklyEnabled}" />
                             <CheckBox Content="{loc:Tr 'Aylık'}" IsChecked="{Binding MonthlyEnabled}" />

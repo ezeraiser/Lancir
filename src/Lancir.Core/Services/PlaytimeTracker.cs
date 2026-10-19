@@ -18,8 +18,19 @@ public sealed record SessionInfo(int GameId, DateTime EndedAtUtc, int PlayCount,
 public sealed class PlaytimeTracker : IDisposable
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
+
+    /// <summary>While the app sleeps (window hidden or minimized) nothing is checked more often than this, a running game included.</summary>
+    private static readonly TimeSpan SleepingInterval = TimeSpan.FromSeconds(30);
+
+    private volatile bool _powerSaving;
+    private int _pollNow;
+    private readonly SemaphoreSlim _wake = new(0, 1);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan GamesCacheLifetime = TimeSpan.FromSeconds(30);
+
+    // Asleep, nobody can edit a game (the window is hidden), so the list is read from the database once and kept: a check then
+    // costs one look at the process list and nothing else.
+    private static readonly TimeSpan SleepingGamesCacheLifetime = TimeSpan.FromMinutes(15);
     private const long MinSessionSeconds = 20;
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -45,9 +56,56 @@ public sealed class PlaytimeTracker : IDisposable
 
     private readonly SettingsService _settingsService;
 
-    /// <summary>How often to look for a newly started game while nothing is running (Settings, 5-600 seconds).</summary>
-    private TimeSpan IdleInterval => TimeSpan.FromSeconds(
-        Math.Clamp(_settingsService.Load().PlaytimeCheckIntervalSeconds, MinCheckIntervalSeconds, MaxCheckIntervalSeconds));
+    /// <summary>How often to look for a newly started game while nothing is running (Settings, 5-600 seconds; at least 30 while sleeping).</summary>
+    private TimeSpan IdleInterval
+    {
+        get
+        {
+            var interval = TimeSpan.FromSeconds(
+                Math.Clamp(_settingsService.Load().PlaytimeCheckIntervalSeconds, MinCheckIntervalSeconds, MaxCheckIntervalSeconds));
+            return _powerSaving && interval < SleepingInterval ? SleepingInterval : interval;
+        }
+    }
+
+    /// <summary>How often a running game is looked at: every few seconds, or every 30 while the app sleeps.</summary>
+    private TimeSpan ActiveInterval => _powerSaving ? SleepingInterval : PollInterval;
+
+    /// <summary>
+    /// True while the app sleeps (its window is hidden or minimized): the checks are spread out. Switching it off checks at once, so
+    /// what the window shows is up to date the moment it opens.
+    /// </summary>
+    public bool PowerSaving
+    {
+        get => _powerSaving;
+        set
+        {
+            if (_powerSaving == value)
+            {
+                return;
+            }
+
+            _powerSaving = value;
+            _gamesCacheExpiresUtc = DateTime.MinValue; // read the list again at the next check, whichever way the mode changed
+            if (!value)
+            {
+                PollNow();
+            }
+        }
+    }
+
+    /// <summary>Asks for a check right away instead of waiting out the interval.</summary>
+    public void PollNow()
+    {
+        Volatile.Write(ref _pollNow, 1);
+        try
+        {
+            _wake.Release();
+        }
+        catch (SemaphoreFullException)
+        {
+            // a wake-up is already waiting
+        }
+    }
 
     /// <summary>Raised after a game's persisted playtime changed: (gameId, total seconds).</summary>
     public event Action<int, long>? PlaytimeChanged;
@@ -100,11 +158,18 @@ public sealed class PlaytimeTracker : IDisposable
         {
             while (!token.IsCancellationRequested)
             {
-                var interval = _sessions.Count > 0 ? PollInterval : IdleInterval;
+                var interval = _sessions.Count > 0 ? ActiveInterval : IdleInterval;
                 var wait = lastPoll + interval - DateTime.UtcNow;
+                if (Interlocked.Exchange(ref _pollNow, 0) == 1)
+                {
+                    wait = TimeSpan.Zero;
+                }
+
                 if (wait > TimeSpan.Zero)
                 {
-                    await Task.Delay(wait < MaxSleep ? wait : MaxSleep, token);
+                    // asleep, the loop wakes only for the next check (a changed setting is noticed then); awake, at least every half minute
+                    var cap = _powerSaving ? SleepingInterval * 2 : MaxSleep;
+                    await _wake.WaitAsync(wait < cap ? wait : cap, token);
                     continue;
                 }
 
@@ -151,7 +216,7 @@ public sealed class PlaytimeTracker : IDisposable
             .Select(g => new TrackedGame(g.Id, g.ExecutablePath, ParseProcessNames(g.TrackedProcessName)))
             .Where(g => g.TrackedNames.Count > 0 || g.ExecutablePath is not null)
             .ToList();
-        _gamesCacheExpiresUtc = DateTime.UtcNow + GamesCacheLifetime;
+        _gamesCacheExpiresUtc = DateTime.UtcNow + (_powerSaving ? SleepingGamesCacheLifetime : GamesCacheLifetime);
         return _gamesCache;
     }
 
@@ -186,6 +251,15 @@ public sealed class PlaytimeTracker : IDisposable
             {
                 // Count up to this poll even when the game just exited, so the last interval isn't lost.
                 var elapsed = (long)(now - session.LastTick).TotalSeconds;
+
+                // A game that is gone ended somewhere between the previous check and this one. With checks a few seconds apart it does not
+                // matter; with checks 30 seconds apart (sleep mode) counting the whole gap would overstate the session by 15 seconds on
+                // average, so half of it is counted.
+                if (!isRunning && elapsed > 10)
+                {
+                    elapsed /= 2;
+                }
+
                 session.Pending += elapsed;
                 session.TotalSeconds += elapsed;
                 session.LastTick = now;
@@ -288,7 +362,7 @@ public sealed class PlaytimeTracker : IDisposable
     /// </summary>
     private long EstimateCreditSeconds(TrackedGame game, Dictionary<string, List<int>> processes, DateTime now)
     {
-        var maxCredit = (long)(IdleInterval + PollInterval).TotalSeconds;
+        var maxCredit = (long)(IdleInterval + ActiveInterval).TotalSeconds;
         IEnumerable<string> names = game.TrackedNames.Count > 0
             ? game.TrackedNames
             : [Path.GetFileNameWithoutExtension(game.ExecutablePath!)];

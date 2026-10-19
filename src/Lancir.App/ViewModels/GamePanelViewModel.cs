@@ -225,6 +225,7 @@ public sealed partial class GamePanelViewModel : ObservableObject
 
         LoadCards();
         DefaultLayoutChanged += LoadCards;
+        BackgroundMode.Changed += OnBackgroundModeChanged;
 
         Library.PropertyChanged += OnLibraryPropertyChanged;
         Library.SessionCompleted += gameId =>
@@ -527,6 +528,22 @@ public sealed partial class GamePanelViewModel : ObservableObject
         if (e.PropertyName == nameof(LibraryViewModel.SelectedGame))
         {
             AttachGame(Library.SelectedGame);
+        }
+    }
+
+    /// <summary>Falling asleep: a video must not keep playing behind a hidden window, and edits waiting for their save are written now.</summary>
+    private void OnBackgroundModeChanged(bool asleep)
+    {
+        if (!asleep)
+        {
+            return;
+        }
+
+        CloseVideo();
+        if (_saveTimer.IsEnabled)
+        {
+            _saveTimer.Stop();
+            _ = SaveNowAsync();
         }
     }
 

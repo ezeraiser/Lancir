@@ -132,7 +132,9 @@ public partial class App : Application
 
         Services.GetRequiredService<BackupScheduler>().Start();
 
-        Services.GetRequiredService<PlaytimeTracker>().Start();
+        var playtimeTracker = Services.GetRequiredService<PlaytimeTracker>();
+        playtimeTracker.Start();
+        _ = new BackgroundMode(mainWindow, Services.GetRequiredService<SettingsService>(), playtimeTracker); // sleep mode: see its summary
         _ = Task.Run(() => ImageLoader.PruneThumbnails()); // keeps the thumbnail folder under its size limit
 
         // Pictures downloaded before compression existed (or before the setting was changed) are converted quietly in the

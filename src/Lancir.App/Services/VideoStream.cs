@@ -22,6 +22,7 @@ public sealed class VideoStream : IDisposable
 
     private static readonly object Gate = new();
     private static LibVLC? _libVlc;
+    private static int _players; // videos open: the shared libVLC is only released while there are none
 
     private readonly Dispatcher _dispatcher;
     private readonly IntPtr _buffer;
@@ -120,9 +121,25 @@ public sealed class VideoStream : IDisposable
     /// </summary>
     public static async Task<VideoStream?> OpenAsync(string source, int volume, CancellationToken cancellationToken = default)
     {
+        LibVLC library;
+        lock (Gate)
+        {
+            try
+            {
+                library = Library();
+            }
+            catch (Exception ex) when (ex is DllNotFoundException or VLCException or BadImageFormatException or InvalidOperationException)
+            {
+                System.Diagnostics.Debug.WriteLine($"VideoStream: {ex.Message}");
+                return null;
+            }
+
+            _players++; // counted before libVLC is used, so ReleaseIfIdle cannot take it away in between
+        }
+
+        var handedOver = false; // the stream itself gives the count back when it is disposed
         try
         {
-            var library = Library();
             var isFile = !source.StartsWith("http", StringComparison.OrdinalIgnoreCase);
             if (isFile && !File.Exists(source))
             {
@@ -162,6 +179,7 @@ public sealed class VideoStream : IDisposable
                 TrailerCache.CacheInBackground(source); // watched once: the next time it plays from disk
             }
 
+            handedOver = true;
             return stream;
         }
         catch (Exception ex) when (ex is DllNotFoundException or VLCException or BadImageFormatException or OperationCanceledException
@@ -169,6 +187,13 @@ public sealed class VideoStream : IDisposable
         {
             System.Diagnostics.Debug.WriteLine($"VideoStream: {ex.Message}");
             return null;
+        }
+        finally
+        {
+            if (!handedOver)
+            {
+                Interlocked.Decrement(ref _players);
+            }
         }
     }
 
@@ -272,8 +297,22 @@ public sealed class VideoStream : IDisposable
                 player?.Dispose();
                 media?.Dispose();
                 Marshal.FreeHGlobal(_buffer);
+                Interlocked.Decrement(ref _players);
             }
         });
+    }
+
+    /// <summary>Releases the shared libVLC instance (its threads and memory) when no video is open; the next video creates it again.</summary>
+    public static void ReleaseIfIdle()
+    {
+        lock (Gate)
+        {
+            if (_players == 0 && _libVlc is not null)
+            {
+                _libVlc.Dispose();
+                _libVlc = null;
+            }
+        }
     }
 
     /// <summary>Releases the shared libVLC instance when the app exits.</summary>

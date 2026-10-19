@@ -923,6 +923,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     private bool _loadingMemory;
 
+
     [ObservableProperty]
     private bool _memoryTrimEnabled = true;
 

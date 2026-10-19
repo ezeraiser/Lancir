@@ -49,6 +49,20 @@ public sealed class MemoryTrimmer
             _ = TrimInBackgroundAsync();
         };
 
+        // Asleep, the app does nothing on its own: no memory checks (sleep mode trims once when it starts).
+        BackgroundMode.Changed += asleep =>
+        {
+            if (asleep)
+            {
+                _checkTimer.Stop();
+                _backgroundTimer.Stop();
+            }
+            else
+            {
+                _checkTimer.Start();
+            }
+        };
+
         window.Deactivated += (_, _) => ScheduleBackgroundTrim();
         window.StateChanged += (_, _) =>
         {
@@ -112,9 +126,9 @@ public sealed class MemoryTrimmer
     private void ScheduleBackgroundTrim()
     {
         var settings = _settings.Load();
-        if (!settings.MemoryTrimEnabled || !settings.MemoryTrimOnBackground)
+        if (!settings.MemoryTrimEnabled || !settings.MemoryTrimOnBackground || settings.BackgroundSleepEnabled)
         {
-            return;
+            return; // with sleep mode on, falling asleep does the trimming
         }
 
         _backgroundTimer.Stop();

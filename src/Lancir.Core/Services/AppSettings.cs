@@ -155,6 +155,13 @@ public sealed class AppSettings
 
     public bool ShowFavoritesLibrary { get; set; } = true;
 
+    /// <summary>
+    /// Sleep mode: while the window is minimized or hidden in the notification area the app stops everything but the game check
+    /// (players closed, memory released, lowest priority, "efficiency mode"). On by default; it has no switch in Settings (a place for
+    /// advanced options may hold one later), only this value in settings.json.
+    /// </summary>
+    public bool BackgroundSleepEnabled { get; set; } = true;
+
     // ---- backups ----
 
     /// <summary>Automatic backups: each switch makes a backup when its time has come (the newest <see cref="BackupKeepCount"/> of each kind are kept).</summary>

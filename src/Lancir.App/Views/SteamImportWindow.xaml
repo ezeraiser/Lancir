@@ -33,7 +33,7 @@
                     <Binding Path="Message" Converter="{StaticResource NullToVisibilityConverter}" />
                 </TextBlock.Visibility>
             </TextBlock>
-            <ProgressBar IsIndeterminate="True" Height="3" Margin="0,8,0,0">
+            <ProgressBar IsIndeterminate="{Binding IsBusy, Mode=OneWay}" Height="3" Margin="0,8,0,0">
                 <ProgressBar.Visibility>
                     <Binding Path="IsBusy" Converter="{StaticResource NullToVisibilityConverter}" />
                 </ProgressBar.Visibility>

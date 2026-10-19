@@ -166,30 +166,73 @@ public sealed class BackupService(SettingsService settingsService, DebugLogServi
 
     // ---------------------------------------------------------------- the schedule
 
+    /// <summary>The time of day the automatic backups are scheduled for (local time): midnight.</summary>
+    public static readonly TimeSpan ScheduledTime = TimeSpan.Zero;
+
+    /// <summary>The most recent scheduled moment (local time) of a kind: last midnight; the Monday of this week; the 1st of this month.</summary>
+    public static DateTime LatestSlot(string kind, DateTime nowLocal)
+    {
+        var today = nowLocal.Date + ScheduledTime;
+        if (today > nowLocal)
+        {
+            today = today.AddDays(-1);
+        }
+
+        return kind switch
+        {
+            "daily" => today,
+            "weekly" => today.AddDays(-(((int)today.DayOfWeek + 6) % 7)),
+            _ => new DateTime(today.Year, today.Month, 1) + ScheduledTime,
+        };
+    }
+
+    /// <summary>The next scheduled moment (local time) after <paramref name="nowLocal"/>: the coming midnight.</summary>
+    public static DateTime NextSlot(DateTime nowLocal)
+    {
+        var next = nowLocal.Date + ScheduledTime;
+        return next <= nowLocal ? next.AddDays(1) : next;
+    }
+
     /// <summary>
-    /// Takes the backups that are due (daily, weekly, monthly: each when switched on in Settings and its time has come). One zip is
-    /// written for all that are due; it is copied under the other names. Returns true when a backup was taken.
+    /// A backup is due when none was taken since the kind's latest scheduled moment: one missed because the app was closed at that time
+    /// is therefore taken as soon as the app runs again, and only once.
+    /// </summary>
+    public static bool IsDue(string kind, DateTime? lastUtc, DateTime nowLocal) =>
+        lastUtc is null || lastUtc.Value.ToLocalTime() < LatestSlot(kind, nowLocal);
+
+    /// <summary>The kinds (daily, weekly, monthly) that are switched on in Settings and due now.</summary>
+    public List<string> DueKinds()
+    {
+        var settings = settingsService.Load();
+        var now = DateTime.Now;
+        var due = new List<string>();
+        if (settings.BackupMonthlyEnabled && IsDue("monthly", settings.LastBackupMonthlyUtc, now))
+        {
+            due.Add("monthly");
+        }
+
+        if (settings.BackupWeeklyEnabled && IsDue("weekly", settings.LastBackupWeeklyUtc, now))
+        {
+            due.Add("weekly");
+        }
+
+        if (settings.BackupDailyEnabled && IsDue("daily", settings.LastBackupDailyUtc, now))
+        {
+            due.Add("daily");
+        }
+
+        return due;
+    }
+
+    /// <summary>
+    /// Takes the backups that are due (see <see cref="IsDue"/>). One zip is written for all that are due; it is copied under the
+    /// other names. Returns true when a backup was taken.
     /// </summary>
     public async Task<bool> RunDueBackupsAsync()
     {
         var settings = settingsService.Load();
         var now = DateTime.UtcNow;
-        var due = new List<string>();
-        if (settings.BackupMonthlyEnabled && (settings.LastBackupMonthlyUtc is null || settings.LastBackupMonthlyUtc.Value.AddMonths(1) <= now))
-        {
-            due.Add("monthly");
-        }
-
-        if (settings.BackupWeeklyEnabled && (settings.LastBackupWeeklyUtc is null || now - settings.LastBackupWeeklyUtc.Value >= TimeSpan.FromDays(7)))
-        {
-            due.Add("weekly");
-        }
-
-        if (settings.BackupDailyEnabled && (settings.LastBackupDailyUtc is null || now - settings.LastBackupDailyUtc.Value >= TimeSpan.FromDays(1)))
-        {
-            due.Add("daily");
-        }
-
+        var due = DueKinds();
         if (due.Count == 0)
         {
             return false;

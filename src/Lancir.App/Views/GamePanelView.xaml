@@ -510,7 +510,9 @@
                         <Binding Path="Panel.HasAchievements" Converter="{StaticResource NullToVisibilityConverter}" />
                     </ProgressBar.Visibility>
                 </ProgressBar>
-                <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,6">
+                <!-- IsIndeterminate follows the busy flag: an indeterminate bar keeps animating (60 times a second) for as long as it says True,
+                     even when it is collapsed or the window is hidden -->
+                <ProgressBar IsIndeterminate="{Binding Panel.IsAchievementsBusy, Mode=OneWay}" Height="3" Margin="0,6,0,6">
                     <ProgressBar.Visibility>
                         <Binding Path="Panel.IsAchievementsBusy" Converter="{StaticResource NullToVisibilityConverter}" />
                     </ProgressBar.Visibility>
@@ -1028,7 +1030,7 @@
             <Grid Grid.Row="1" Margin="20,8">
                 <Image Source="{Binding VideoFrame}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
                 <Button Style="{StaticResource OverlayHitButtonStyle}" Command="{Binding ToggleVideoPlayCommand}" />
-                <ui:ProgressRing IsIndeterminate="True" Width="56" Height="56" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ui:ProgressRing IsIndeterminate="{Binding IsVideoLoading, Mode=OneWay}" Width="56" Height="56" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <ui:ProgressRing.Visibility>
                         <Binding Path="IsVideoLoading" Converter="{StaticResource NullToVisibilityConverter}" />
                     </ui:ProgressRing.Visibility>
