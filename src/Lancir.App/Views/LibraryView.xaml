@@ -11,6 +11,15 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:LibraryViewModel}">
     <UserControl.Resources>
+        <!-- The scroll viewer is part of the list itself (not around it): the panel then knows how much room it has and builds only the
+             items that are on screen and a little beyond. A ScrollViewer around an ItemsControl gives its panel unlimited room, which
+             turns that off and builds every item. -->
+        <ControlTemplate x:Key="VirtualScrollTemplate" TargetType="ItemsControl">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" CanContentScroll="True" Focusable="False">
+                <ItemsPresenter />
+            </ScrollViewer>
+        </ControlTemplate>
+
         <Style x:Key="GameCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
             <Setter Property="CornerRadius" Value="12" />
@@ -113,6 +122,13 @@
             </Grid.RowDefinitions>
             <TextBlock Grid.Column="0" Text="{Binding ScopeTitle}" FontSize="26" FontWeight="SemiBold"
                        VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0" ToolTip="{loc:Tr 'Ayarlar → İşler bölümünden izleyebilir ve iptal edebilirsiniz'}">
+                <StackPanel.Visibility>
+                    <Binding Path="IsMatchJobRunning" Converter="{StaticResource NullToVisibilityConverter}" />
+                </StackPanel.Visibility>
+                <ui:ProgressRing IsIndeterminate="{Binding IsMatchJobRunning, Mode=OneWay}" Width="16" Height="16" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding MatchJobText}" FontSize="12.5" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
             <!-- filter chips: pick several; any chosen status, plus favorites when that chip is on -->
             <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="0,10,0,0">
                 <ToggleButton IsChecked="{Binding FilterPlaying}" Margin="0,0,6,6" Padding="10,7" ToolTip="{loc:Tr 'Oynuyorum'}" AutomationProperties.Name="{loc:Tr 'Oynuyorum'}">
@@ -174,14 +190,14 @@
                            HorizontalAlignment="Center" />
             </StackPanel>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ScrollViewer.Visibility>
+            <ItemsControl ItemsSource="{Binding GamesView}" Template="{StaticResource VirtualScrollTemplate}"
+                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                <ItemsControl.Visibility>
                     <Binding Path="IsListView" Converter="{StaticResource NullToVisibilityConverter}" ConverterParameter="Invert" />
-                </ScrollViewer.Visibility>
-                <ItemsControl ItemsSource="{Binding GamesView}">
+                </ItemsControl.Visibility>
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal" />
+                            <ctrl:VirtualizingWrapPanel Overscan="2" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
@@ -256,14 +272,19 @@
                             </DataTemplate.Triggers>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            </ItemsControl>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ScrollViewer.Visibility>
+            <ItemsControl ItemsSource="{Binding GamesView}" Template="{StaticResource VirtualScrollTemplate}"
+                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.CacheLength="1,1" VirtualizingPanel.CacheLengthUnit="Page">
+                <ItemsControl.Visibility>
                     <Binding Path="IsListView" Converter="{StaticResource NullToVisibilityConverter}" />
-                </ScrollViewer.Visibility>
-                <ItemsControl ItemsSource="{Binding GamesView}">
+                </ItemsControl.Visibility>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:LibraryGameViewModel}">
                             <Border Margin="0,0,16,3" MinHeight="46" Padding="6,4"
@@ -318,8 +339,7 @@
                             </DataTemplate.Triggers>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            </ItemsControl>
         </Grid>
     </Grid>
 </UserControl>

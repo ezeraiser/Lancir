@@ -237,6 +237,10 @@ public sealed class LibraryService
         var updated = 0;
         var newGames = new List<LibraryGame>();
 
+        // games that are already tracked here may have newer playtime in the database (see RefreshPlaytimeAsync): bring them up to date
+        // before Steam's time is added on top of it, or time the tracker counted would be overwritten
+        await RefreshPlaytimeAsync(rows.Where(r => r.ExistingGameId is not null).Select(r => r.ExistingGameId!.Value).ToList(), cancellationToken);
+
         foreach (var row in rows)
         {
             var game = row.ExistingGameId is { } id ? await _dbContext.Games.FindAsync([id], cancellationToken) : null;
@@ -255,9 +259,6 @@ public sealed class LibraryService
             }
             else
             {
-                // PlaytimeTracker writes playtime through its own context, so this tracked copy can be stale:
-                // reload before adding Steam's time on top of it, or tracked time would be overwritten.
-                await _dbContext.Entry(game).ReloadAsync(cancellationToken);
                 game.SteamAppId ??= row.Game.AppId;
                 updated++;
             }
@@ -284,14 +285,15 @@ public sealed class LibraryService
 
         var owned = fetch.Games.ToDictionary(g => g.AppId);
         var changed = 0;
-        foreach (var game in await _dbContext.Games.Where(g => g.SteamAppId != null).ToListAsync(cancellationToken))
+        var steamGames = await _dbContext.Games.Where(g => g.SteamAppId != null).ToListAsync(cancellationToken);
+        await RefreshPlaytimeAsync(steamGames.Where(g => owned.ContainsKey(g.SteamAppId!.Value)).Select(g => g.Id).ToList(), cancellationToken);
+        foreach (var game in steamGames)
         {
             if (!owned.TryGetValue(game.SteamAppId!.Value, out var steamGame))
             {
                 continue;
             }
 
-            await _dbContext.Entry(game).ReloadAsync(cancellationToken); // see ApplySteamImportAsync: tracked copy may be stale
             if (ApplySteamPlaytimeTo(game, steamGame))
             {
                 changed++;
@@ -353,6 +355,41 @@ public sealed class LibraryService
         }
 
         return cached is not null ? cached with { FromCache = true } : fresh;
+    }
+
+    /// <summary>
+    /// PlaytimeTracker writes playtime through its own context, so the copies this context tracks can be stale: before Steam's time is
+    /// added on top of them they are brought up to date. One query for all of them (a Reload per game was one query each: 241 games
+    /// took over a quarter of a second, all of it on the UI thread). The fresh values become the tracked ones and the original ones,
+    /// so nothing is written back for them unless the Steam step changes it.
+    /// </summary>
+    private async Task RefreshPlaytimeAsync(IReadOnlyCollection<int> gameIds, CancellationToken cancellationToken)
+    {
+        if (gameIds.Count == 0)
+        {
+            return;
+        }
+
+        var fresh = await _dbContext.Games.AsNoTracking()
+            .Where(g => gameIds.Contains(g.Id))
+            .Select(g => new { g.Id, g.PlaytimeSeconds, g.LastPlayedUtc, g.SteamPlaytimeOffsetSeconds })
+            .ToListAsync(cancellationToken);
+        var tracked = _dbContext.Games.Local.ToDictionary(g => g.Id);
+        foreach (var row in fresh)
+        {
+            if (!tracked.TryGetValue(row.Id, out var game))
+            {
+                continue;
+            }
+
+            var entry = _dbContext.Entry(game);
+            entry.Property(g => g.PlaytimeSeconds).OriginalValue = row.PlaytimeSeconds;
+            entry.Property(g => g.PlaytimeSeconds).CurrentValue = row.PlaytimeSeconds;
+            entry.Property(g => g.LastPlayedUtc).OriginalValue = row.LastPlayedUtc;
+            entry.Property(g => g.LastPlayedUtc).CurrentValue = row.LastPlayedUtc;
+            entry.Property(g => g.SteamPlaytimeOffsetSeconds).OriginalValue = row.SteamPlaytimeOffsetSeconds;
+            entry.Property(g => g.SteamPlaytimeOffsetSeconds).CurrentValue = row.SteamPlaytimeOffsetSeconds;
+        }
     }
 
     private static bool ApplySteamPlaytimeTo(LibraryGame game, SteamOwnedGame steamGame)
@@ -452,16 +489,39 @@ public sealed class LibraryService
             positions[orderedGameIds[i]] = i + 1;
         }
 
-        var games = await _dbContext.Games.ToListAsync(cancellationToken);
-        foreach (var game in games)
+        // The games are already tracked (the library page loaded them): use those instead of reading every row again, and only
+        // touch the ones whose place changed, so SaveChanges writes just those rows.
+        var tracked = _dbContext.Games.Local.ToDictionary(g => g.Id);
+        var missing = positions.Keys.Where(id => !tracked.ContainsKey(id)).ToList();
+        if (missing.Count > 0)
         {
-            if (positions.TryGetValue(game.Id, out var position))
+            foreach (var game in await _dbContext.Games.Where(g => missing.Contains(g.Id)).ToListAsync(cancellationToken))
+            {
+                tracked[game.Id] = game;
+            }
+        }
+
+        foreach (var (id, position) in positions)
+        {
+            if (tracked.TryGetValue(id, out var game) && game.SortOrder != position)
             {
                 game.SortOrder = position;
             }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>The game as it is in the database now: another context (the match-all job's) may have changed it since it was loaded.</summary>
+    public async Task<LibraryGame?> ReloadGameAsync(int gameId, CancellationToken cancellationToken = default)
+    {
+        var game = await _dbContext.Games.FindAsync([gameId], cancellationToken);
+        if (game is not null)
+        {
+            await _dbContext.Entry(game).ReloadAsync(cancellationToken);
+        }
+
+        return game;
     }
 
     /// <summary>Saves changes made directly to tracked library games (favorite, status, notes, ...).</summary>

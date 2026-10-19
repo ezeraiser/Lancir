@@ -80,7 +80,7 @@ public sealed class MatchPickerService : IMatchPickerService
         return accepted == true && window.Saved ? viewModel : null;
     }
 
-    public bool EditDetails(LibraryGame game)
+    public async Task<bool> EditDetailsAsync(LibraryGame game)
     {
         var viewModel = new GameDetailsViewModel(game);
         var window = new GameDetailsWindow(viewModel)
@@ -94,10 +94,10 @@ public sealed class MatchPickerService : IMatchPickerService
             return false;
         }
 
-        _libraryService.UpdateGameDetailsAsync(
+        // awaited, not waited for: blocking the UI thread on an async call can deadlock as soon as one step really goes async
+        await _libraryService.UpdateGameDetailsAsync(
             game.Id, viewModel.DisplayName, viewModel.Description, viewModel.Genres, viewModel.ExecutablePath,
-            viewModel.SteamAppId, viewModel.LaunchSettings)
-            .GetAwaiter().GetResult();
+            viewModel.SteamAppId, viewModel.LaunchSettings);
 
         return true;
     }

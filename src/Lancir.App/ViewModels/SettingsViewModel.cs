@@ -24,9 +24,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     public SettingsViewModel(
         SettingsService settingsService, ISteamLibraryClient steamLibraryClient, ImageOptimizer imageOptimizer,
-        IServiceScopeFactory scopeFactory, ClipOptimizer clipOptimizer, OriginalsRestorer restorer, BackupViewModel backup)
+        IServiceScopeFactory scopeFactory, ClipOptimizer clipOptimizer, OriginalsRestorer restorer, BackupViewModel backup,
+        MatchJobViewModel matchJob)
     {
         Backup = backup;
+        MatchJob = matchJob;
         _restorer = restorer;
         _scopeFactory = scopeFactory;
         _clipOptimizer = clipOptimizer;
@@ -109,9 +111,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
     }
 
     /// <summary>The section (tab) shown in Settings; the folder scan is the sixth.</summary>
-    public const int ScanSectionIndex = 6;
+    public const int ScanSectionIndex = 7;
 
     public BackupViewModel Backup { get; }
+
+    public MatchJobViewModel MatchJob { get; }
 
     [ObservableProperty]
     private int _selectedSectionIndex;

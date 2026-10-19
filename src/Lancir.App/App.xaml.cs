@@ -159,12 +159,21 @@ public partial class App : Application
             _ = Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromSeconds(60));
-                while (tracker.AnyRunning)
+                while (true)
                 {
-                    await Task.Delay(TimeSpan.FromMinutes(5));
-                }
+                    while (tracker.AnyRunning)
+                    {
+                        await Task.Delay(TimeSpan.FromMinutes(5));
+                    }
 
-                await clipOptimizer.RunAsync();
+                    // A game that starts meanwhile makes the run stop after the clip it is on; once the game is over the rest goes on.
+                    var pausedForGame = false;
+                    await clipOptimizer.RunAsync(pauseRequested: () => pausedForGame = tracker.AnyRunning);
+                    if (!pausedForGame)
+                    {
+                        break;
+                    }
+                }
             });
         }
     }
@@ -217,6 +226,10 @@ public partial class App : Application
         services.AddSingleton<BackupService>();
         services.AddSingleton<BackupScheduler>();
         services.AddSingleton<BackupViewModel>();
+        services.AddSingleton<IGameMatcher, ScopedGameMatcher>();
+        services.AddSingleton(sp => new MatchAllJob(sp.GetRequiredService<IGameMatcher>(), sp.GetRequiredService<DebugLogService>()));
+        services.AddSingleton<MatchAllCoordinator>();
+        services.AddSingleton<MatchJobViewModel>();
         services.AddSingleton<PlayHistoryService>();
         services.AddSingleton<DebugLogService>();
         services.AddTransient<IMatchPickerService, MatchPickerService>();

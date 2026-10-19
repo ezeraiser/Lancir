@@ -649,6 +649,42 @@
                     </ctrl:ColumnFlowPanel>
                 </ScrollViewer>
             </TabItem>
+            <TabItem Header="{loc:Tr 'İşler'}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" DataContext="{Binding MatchJob}">
+                    <ctrl:ColumnFlowPanel Margin="0,16,0,16">
+                    <TextBlock Text="{loc:Tr 'Hepsini eşleştir'}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8" />
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" TextWrapping="Wrap"
+                                       Text="{loc:Tr 'Eşleşmeyen oyunları Steam, SteamGridDB ve IGDB ile eşleştirir. Arka planda tek bir iş olarak çalışır ve aynı anda yalnızca bir tane çalışabilir. Yarıda kalırsa ya da yeniden başlatırsanız, son 1 saat içinde denenmiş oyunları atlayarak devam edebilir ya da baştan başlayabilirsiniz.'}" />
+                            <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,14,0,6" />
+                            <ProgressBar Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding ProgressValue, Mode=OneWay}" Height="6" Margin="0,0,0,8">
+                                <ProgressBar.Visibility>
+                                    <Binding Path="IsRunning" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </ProgressBar.Visibility>
+                            </ProgressBar>
+                            <TextBlock Text="{Binding CurrentGameText}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                <TextBlock.Visibility>
+                                    <Binding Path="CurrentGameText" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </TextBlock.Visibility>
+                            </TextBlock>
+                            <TextBlock Text="{Binding DetailText}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                <TextBlock.Visibility>
+                                    <Binding Path="DetailText" Converter="{StaticResource NullToVisibilityConverter}" />
+                                </TextBlock.Visibility>
+                            </TextBlock>
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <ui:Button Content="{loc:Tr 'Başlat'}" Appearance="Primary" Command="{Binding StartCommand}" Margin="0,0,8,0" />
+                                <ui:Button Content="{loc:Tr 'İptal et'}" Command="{Binding CancelCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    </ctrl:ColumnFlowPanel>
+                </ScrollViewer>
+            </TabItem>
             <TabItem Header="{loc:Tr 'Klasör Tara'}">
                 <views:ScanReviewView ShowTitle="False" Margin="0,16,0,0"
                                       DataContext="{Binding DataContext.ScanReviewViewModel, RelativeSource={RelativeSource AncestorType=Window}}" />

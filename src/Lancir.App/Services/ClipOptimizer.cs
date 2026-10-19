@@ -52,10 +52,13 @@ public sealed class ClipOptimizer
     public bool NeedsRun => _settings.Load().ClipStorage != ImageStorageMode.Original && PendingClips().Count > 0;
 
     /// <summary>
-    /// Optimizes the pending clips. Returns null when the setting is "original" or a run is already going. Call it from a
+    /// Optimizes the pending clips. <paramref name="pauseRequested"/> is asked before each clip: when it says yes the run stops there (the
+    /// clip being converted is finished first) and the rest waits for a later run, so encoding can step aside for a game.
+    /// Returns null when the setting is "original" or a run is already going. Call it from a
     /// background task; it can take a few seconds per clip.
     /// </summary>
-    public async Task<ClipResult?> RunAsync(IProgress<ClipProgress>? progress = null, CancellationToken cancellationToken = default)
+    public async Task<ClipResult?> RunAsync(
+        IProgress<ClipProgress>? progress = null, CancellationToken cancellationToken = default, Func<bool>? pauseRequested = null)
     {
         var settings = _settings.Load();
         if (settings.ClipStorage == ImageStorageMode.Original || !await _running.WaitAsync(0, cancellationToken))
@@ -76,6 +79,11 @@ public sealed class ClipOptimizer
             for (var i = 0; i < pending.Count; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (pauseRequested?.Invoke() == true)
+                {
+                    break; // what is done is kept (below); the clips left are still pending for the next run
+                }
+
                 var file = pending[i];
                 progress?.Report(new ClipProgress(i, pending.Count, Path.GetFileName(file)));
 

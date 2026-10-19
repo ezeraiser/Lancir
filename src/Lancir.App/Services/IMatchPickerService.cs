@@ -21,7 +21,7 @@ public interface IMatchPickerService
     /// Shows the details editor (name, description, genres, executable path, plus read-only
     /// background/rating/release date) for a game. Returns true if the user saved changes.
     /// </summary>
-    bool EditDetails(LibraryGame game);
+    Task<bool> EditDetailsAsync(LibraryGame game);
 
     /// <summary>
     /// Shows the details editor, empty, to add a game by hand. Returns the entered values, or null

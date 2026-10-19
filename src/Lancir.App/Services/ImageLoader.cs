@@ -28,7 +28,9 @@ public static class ImageLoader
     private static readonly object Sync = new();
     private static readonly Dictionary<string, LinkedListNode<Entry>> Entries = [];
     private static readonly LinkedList<Entry> Recent = new(); // first = most recently used
-    private static readonly Dictionary<string, string> LatestKey = [];
+    // The newest picture of each slot (source + width), readable without taking Sync: the UI thread asks for it for every picture while a
+    // page is built, and must never wait for a background thread that happens to hold the lock.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, BitmapSource> Latest = new();
     private static readonly Dictionary<string, Task<BitmapSource?>> InFlight = [];
     // A game with 190 achievements asks for 190 icons at once; the CDN drops many of such a burst, and a dropped one stayed blank.
     private static readonly SemaphoreSlim DownloadGate = new(6);
@@ -58,15 +60,8 @@ public static class ImageLoader
     /// The last picture decoded for this source and width, if it is still cached. No file access, so it is safe on the
     /// UI thread: the control shows it at once and <see cref="LoadAsync"/> then confirms (or replaces) it.
     /// </summary>
-    public static BitmapSource? TryGetCached(string source, int width)
-    {
-        lock (Sync)
-        {
-            return LatestKey.TryGetValue(Slot(source, width), out var key) && Entries.TryGetValue(key, out var node)
-                ? Touch(node).Image
-                : null;
-        }
-    }
+    public static BitmapSource? TryGetCached(string source, int width) =>
+        Latest.TryGetValue(Slot(source, width), out var image) ? image : null;
 
     /// <summary>
     /// Loads a picture without touching the UI thread. Local files are re-checked by modification time (a cover that
@@ -104,23 +99,40 @@ public static class ImageLoader
             var key = $"{source}|{width}|{stamp}";
             var thumb = remote ? null : ThumbPathFor(key);
             Task<BitmapSource?> work;
+            TaskCompletionSource<BitmapSource?>? owner = null;
             lock (Sync)
             {
                 if (Entries.TryGetValue(key, out var hit))
                 {
-                    LatestKey[Slot(source, width)] = key;
+                    Latest[Slot(source, width)] = hit.Value.Image;
                     return Touch(hit).Image;
                 }
 
                 if (!InFlight.TryGetValue(key, out work!))
                 {
-                    work = DecodeAndStoreAsync(source, width, key, remote, diskCacheFolder, thumb);
+                    // Only the bookkeeping happens under the lock. The work itself (file checks, starting a download, the decode) is
+                    // started below, outside it: run inside the lock, its first steps blocked everybody who needed the cache, the UI
+                    // thread included, for as long as a file or the network took to answer.
+                    owner = new TaskCompletionSource<BitmapSource?>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    work = owner.Task;
                     InFlight[key] = work;
                 }
             }
 
             try
             {
+                if (owner is not null)
+                {
+                    try
+                    {
+                        owner.SetResult(await DecodeAndStoreAsync(source, width, key, remote, diskCacheFolder, thumb));
+                    }
+                    catch (Exception ex)
+                    {
+                        owner.SetException(ex); // the others waiting for the same picture are told as well
+                    }
+                }
+
                 return await work;
             }
             finally
@@ -146,7 +158,7 @@ public static class ImageLoader
         {
             Entries.Clear();
             Recent.Clear();
-            LatestKey.Clear();
+            Latest.Clear();
             _bytes = 0;
         }
     }
@@ -202,7 +214,7 @@ public static class ImageLoader
             lock (Sync)
             {
                 Add(new Entry(key, image, cost));
-                LatestKey[Slot(source, width)] = key;
+                Latest[Slot(source, width)] = image;
             }
 
             return image;
@@ -415,6 +427,11 @@ public static class ImageLoader
             Recent.RemoveLast();
             Entries.Remove(last.Value.Key);
             _bytes -= last.Value.Bytes;
+            var slot = last.Value.Key[..last.Value.Key.LastIndexOf('|')]; // key = source|width|stamp
+            if (Latest.TryGetValue(slot, out var held) && ReferenceEquals(held, last.Value.Image))
+            {
+                Latest.TryRemove(slot, out _);
+            }
         }
     }
 }

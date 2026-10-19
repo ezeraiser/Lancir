@@ -26,6 +26,8 @@ public sealed partial class LibraryViewModel : ViewModelBase
     private readonly SettingsService _settingsService;
     private readonly PlaytimeTracker _playtimeTracker;
     private bool _detailsDismissed;
+    private readonly MatchAllJob _matchJob;
+    private readonly MatchAllCoordinator _matchCoordinator;
 
     public LibraryViewModel(
         LibraryService libraryService,
@@ -33,8 +35,21 @@ public sealed partial class LibraryViewModel : ViewModelBase
         IMatchPickerService matchPickerService,
         DebugLogService log,
         PlaytimeTracker playtimeTracker,
-        SettingsService settingsService)
+        SettingsService settingsService,
+        MatchAllJob matchJob,
+        MatchAllCoordinator matchCoordinator)
     {
+        _matchJob = matchJob;
+        _matchCoordinator = matchCoordinator;
+        _matchJob.GameStarted += id => OnUi(() =>
+        {
+            if (Games.FirstOrDefault(g => g.Id == id) is { } game)
+            {
+                game.IsMatching = true;
+            }
+        });
+        _matchJob.GameFinished += (id, matched) => OnUi(async () => await ApplyJobResultAsync(id, matched));
+        _matchJob.Changed += () => OnUi(UpdateMatchJobText);
         _settingsService = settingsService;
         _isListView = settingsService.Load().IsLibraryListView;
         _selectedSortOption = SortOptions.FirstOrDefault(
@@ -460,7 +475,7 @@ public sealed partial class LibraryViewModel : ViewModelBase
             return;
         }
 
-        var edited = _matchPickerService.EditDetails(gameViewModel.Game);
+        var edited = await _matchPickerService.EditDetailsAsync(gameViewModel.Game);
         if (!edited)
         {
             return;
@@ -621,6 +636,11 @@ public sealed partial class LibraryViewModel : ViewModelBase
             return;
         }
 
+        if (gameViewModel.IsMatching)
+        {
+            return; // already being matched (by the match-all job, say)
+        }
+
         gameViewModel.IsMatching = true;
         try
         {
@@ -653,12 +673,41 @@ public sealed partial class LibraryViewModel : ViewModelBase
     /// Runs the match (SteamGridDB, then IGDB fallback) for every game that doesn't already have one.
     /// </summary>
     [RelayCommand]
-    private async Task MatchAllAsync()
+    private async Task MatchAllAsync() => await _matchCoordinator.StartAsync();
+
+    private static void OnUi(Action action) => System.Windows.Application.Current?.Dispatcher.BeginInvoke(action);
+
+    /// <summary>Shown in the library header while the match-all job runs ("12 / 40"); null otherwise.</summary>
+    [ObservableProperty]
+    private string? _matchJobText;
+
+    [ObservableProperty]
+    private bool _isMatchJobRunning;
+
+    private void UpdateMatchJobText()
     {
-        var unmatched = Games.Where(g => !g.IsMatched).ToList();
-        foreach (var gameViewModel in unmatched)
+        var s = _matchJob.Snapshot;
+        IsMatchJobRunning = s.IsRunning;
+        MatchJobText = s.IsRunning ? Loc.F("Eşleştiriliyor: {0} / {1}", s.Processed, s.Total) : null;
+    }
+
+    /// <summary>The job finished a game: its spinner stops and, when it was matched, the game is read again (the job wrote it through a context of its own).</summary>
+    private async Task ApplyJobResultAsync(int gameId, bool matched)
+    {
+        if (Games.FirstOrDefault(g => g.Id == gameId) is not { } game)
         {
-            await MatchGameAsync(gameViewModel);
+            return;
+        }
+
+        game.IsMatching = false;
+        if (!matched)
+        {
+            return;
+        }
+
+        if (await _libraryService.ReloadGameAsync(gameId) is { } fresh)
+        {
+            ReplaceGame(game, fresh);
         }
     }
 }
